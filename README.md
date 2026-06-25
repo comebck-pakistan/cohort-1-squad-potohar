@@ -16,9 +16,9 @@
 ## 💡 Our Idea
 
 Our squad is building from **one** of the ten ideas in the
-[Cohort 1 Product Challenge](https://github.com/Comebck-Pakistan). The idea is a starting line,
-not a spec — our job is to **narrow it** to one specific user, one painful problem, and
-one small thing we can ship in 8 weeks.
+[Cohort 1 Product Challenge](https://github.com/Comebck-Pakistan/cohort-1-product-challenge). The
+idea is a starting line, not a spec — our job is to **narrow it** to one specific user,
+one painful problem, and one small thing we can ship in 8 weeks.
 
 **Pick one of the ten ideas, then delete the rest of this list:**
 
