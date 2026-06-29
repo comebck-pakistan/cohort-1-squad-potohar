@@ -11,37 +11,39 @@
 - Anas Khan
 - Muhammad Eesa Qamar
 
+**GitHub usernames:**
+
+- [@anasAnonymous](https://github.com/anasAnonymous)
+- [@itsrafay03](https://github.com/itsrafay03)
+- [@Azharaliii](https://github.com/Azharaliii)
+- [@Eesa-cyber](https://github.com/Eesa-cyber)
+- [@Zaidharissheikh](https://github.com/Zaidharissheikh)
+
 ---
 
 ## 💡 Our Idea
 
-Our squad is building from **one** of the ten ideas in the
-[Cohort 1 Product Challenge](https://github.com/Comebck-Pakistan/cohort-1-product-challenge). The
-idea is a starting line, not a spec — our job is to **narrow it** to one specific user,
-one painful problem, and one small thing we can ship in 8 weeks.
+Our squad picked **[Idea 4 — The Freelancer's Co-Pilot](https://github.com/Comebck-Pakistan/cohort-1-product-challenge#idea-4--the-freelancers-co-pilot)** from the [Cohort 1 Product Challenge](https://github.com/Comebck-Pakistan/cohort-1-product-challenge). Below are our ideation-stage validation answers, reproduced exactly as we submitted them.
 
-**Pick one of the ten ideas, then delete the rest of this list:**
+### One specific user
 
-1. The Small-Business Brain (WhatsApp-first)
-2. The Urdu-First Study Coach
-3. The Shoebox-to-Books Bookkeeper
-4. The Freelancer's Co-Pilot
-5. The Always-On Front Desk (Voice/WhatsApp Agent)
-6. The Farmer's Advisor in Your Pocket
-7. The SME Paperwork Generator
-8. The Social-Commerce Support Agent
-9. The Fair First-Round Recruiter
-10. The Public-Services Navigator
+A fresh freelancer who's wasting connects applying to irrelevant jobs on Upwork
 
-### 📌 Our pick
+### The painful problem
 
-> _Fill this in as a squad._
+Either they apply late or apply to irrelevant jobs in order to submit their proposal fast. This hurts their chances of landing the job, and as a result, they waste connects.
 
-- **Idea we picked:** _#__ — ____________________________________________
-- **One specific user:** _______________________________________________
-- **The painful problem:** _____________________________________________
-- **Our 8-week wedge (the one small thing we'll ship):** _______________
-- **The one number that proves people want it:** _______________________
+### Our 8-week wedge
+
+​This tool helps freelancers filter and identify relevant jobs based on their profile and preferences. Additionally, it suggests catchy hooks to grab a client's attention, ultimately increasing the chances of getting their proposal reviewed and hired.
+
+### The one number that proves people want it
+
+20+ freelancers winning projects by bidding on projects aligned with their skills by the end of 8 weeks.
+
+### Why we picked this idea
+
+We have successfully reached out to 10+ freelancers this week, and two of our squad members had the same problem when bidding on projects on Upwork.
 
 ---
 
