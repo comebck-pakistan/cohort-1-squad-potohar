@@ -10,6 +10,7 @@
 - Azhar Soomro
 - Anas Khan
 - Muhammad Eesa Qamar
+- Zaid Haris Saigal
 
 **GitHub usernames:**
 
