@@ -62,7 +62,7 @@ e.g. Frontend developer, 8 months on Upwork, Rising Talent badge
 Shahzaib — Digital Marketer & Automation Expert with 2 years of experience on Upwork.
 
 **Key Quote:**  
-> "The biggest challenge for new freelancers is not just getting clients—it's competing without experience while also having to invest in connects."
+> "The biggest challenge for new freelancers is not just getting clients but it's competing without experience while also having to invest in connects."
 
 **Core Pain Identified:**
 - The upfront cost of purchasing Upwork connects is a significant barrier for beginners.
