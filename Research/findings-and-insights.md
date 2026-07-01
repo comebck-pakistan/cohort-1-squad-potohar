@@ -56,7 +56,29 @@ e.g. Frontend developer, 8 months on Upwork, Rising Talent badge
 
 ## 4. Personal Network Interviews
 
-<!-- Add entries here -->
+### Muhammad Rafay — 28/06/2026
+
+**Respondent Profile:**  
+Shahzaib — Digital Marketer & Automation Expert with 2 years of experience on Upwork.
+
+**Key Quote:**  
+> "The biggest challenge for new freelancers is not just getting clients—it's competing without experience while also having to invest in connects."
+
+**Core Pain Identified:**
+- The upfront cost of purchasing Upwork connects is a significant barrier for beginners.
+- Clients generally prefer experienced freelancers, making it difficult for newcomers to secure their first projects.
+- Many new freelancers start applying before developing a complete skill set because they are eager to earn, which results in weak proposals and low response rates.
+
+**Connects Behaviour:**
+- Due to limited budgets, new freelancers are more cautious about where they spend connects.
+- Many apply to numerous jobs without proper preparation, leading to wasted connects and poor outcomes.
+
+**What They Wished Existed:**
+- Lower-cost or beginner-friendly connect options for new freelancers.
+- Better opportunities for skilled beginners to showcase their abilities despite having little or no work history.
+
+**Any Other Notes:**
+- Shahzaib mentioned that proposal writing itself is less of a challenge today because many AI-powered and online tools help freelancers create effective proposals. However, he believes that experience and a strong skill set remain the key factors in winning clients.
 
 ---
 
