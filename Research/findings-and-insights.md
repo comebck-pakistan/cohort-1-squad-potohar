@@ -71,7 +71,29 @@ Reddit user (u/Clean-Employment-233), commenting on a freelancing/startup subred
 
 ## 3. WhatsApp Group Polls
 
-<!-- Add entries here -->
+### Azhar Ali — 28/06/2026
+
+**Respondent Profile:**
+Pakixto Advanced Marketing — member of "Students StartUp & Freelancer" WhatsApp group, beginner-level freelancer.
+
+**Key Quote:**
+> "I spend 10k on 10 projects with no guarantees to win them even client didn't open them."
+
+**Core Pain Identified:**
+- Cost of paid proposals/connects is a major barrier for beginners — cites ~1000 PKR per job on average as prohibitively expensive.
+- No guarantee of return: money is spent on bids that clients don't even open, let alone review.
+- Believes rejection is less about proposal quality and more about clients not opening/reviewing proposals at all.
+
+**Connects Behaviour:**
+- Spends heavily (10k PKR across 10 projects) with no visibility into whether the client engaged with the proposal at all.
+
+**What They Wished Existed:**
+- More flexible, less "costly" bidding structures from marketplaces.
+- Pay-on-selection model: charge freelancers for bidding only if they're actually selected, not upfront.
+
+**Any Other Notes:**
+- Strong pricing/risk pain point — this respondent frames the core issue as marketplace economics (cost-to-bid), not proposal-writing skill.
+
 
 ---
 
