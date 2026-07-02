@@ -94,6 +94,49 @@ Pakixto Advanced Marketing — member of "Students StartUp & Freelancer" WhatsAp
 **Any Other Notes:**
 - Strong pricing/risk pain point — this respondent frames the core issue as marketplace economics (cost-to-bid), not proposal-writing skill.
 
+### Azhar Ali — 02/07/2026
+
+
+
+**Respondent Profile:**
+
+ Gul Fatimah in Same "Students StartUp & Freelancer" WhatsApp group poll (3-question format). 
+
+
+
+**Key Quote:**
+
+> "Individual freelancers cannot keep up with agencies who bid with 100+ connects."
+
+
+
+**Core Pain Identified:**
+
+- Competing against agencies with far larger connects budgets makes it structurally hard for individual freelancers to win bidding wars.
+
+- Proposals get ignored even with good ratings — attributes this to employers posting jobs and then never following through (ghost jobs), not proposal quality.
+
+
+
+**Connects Behaviour:**
+
+- Frames the problem at the marketplace level: "boosted proposals" let some bidders pay to rank higher, further disadvantaging individual freelancers.
+
+
+
+**What They Wished Existed:**
+
+- Accountability mechanism for employers to reduce ghost job postings.
+
+- Fairer bidding — specifically, disabling "boosted" proposals so visibility isn't pay-to-win.
+
+
+
+**Any Other Notes:**
+
+- Second respondent independently raises the same theme as the first (marketplace fairness/cost), which strengthens this as a validated pattern rather than a one-off complaint.
+
+
 
 ---
 
