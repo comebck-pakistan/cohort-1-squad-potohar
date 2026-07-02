@@ -39,6 +39,44 @@ e.g. Frontend developer, 8 months on Upwork, Rising Talent badge
 ## 1. LinkedIn Outreach
 
 <!-- Add entries here -->
+### Muhammad Rafay — 30/06/2026
+
+**Respondent Profile:**  
+Zia Ahmed — Senior Software Architect with 10+ years of freelancing experience on Upwork.
+
+**Discussion Background:**  
+I initially reached out to Zia Ahmed on LinkedIn and invited him for a 1:1 interview. Due to his busy schedule, we continued the conversation through LinkedIn messages instead. After explaining the problem our team is trying to solve, he showed genuine interest in the idea. 
+To validate our previous findings, I asked him the following four questions. Although his responses were extremely brief, they were based on years of real freelancing experience and served as a strong validation of patterns we had already observed from other freelancers.
+
+**Key Quote:**  
+> "Time. First 2 Lines. Speed. ChatGPT."
+
+**Core Pain Identified:**
+- **Q1:** What's the hardest part of winning projects on freelancing platforms?  
+  **Answer:** Time
+
+- **Q2:** What's the main reason you think your proposals got rejected?  
+  **Answer:** First 2 Lines
+
+- **Q3:** If you could fix one thing about the bidding process, what would it be?  
+  **Answer:** Speed
+
+- **Q4:** If you use any tool/extension to write proposals or analyze job posts, what do you use, and what still needs improvement?  
+  **Answer:** ChatGPT
+
+**Connects Behaviour:**
+- His answers suggest that experienced freelancers value efficiency and quick decision-making during the bidding process.
+
+**What They Wished Existed:**
+- Faster proposal creation.
+- Better proposal openings.
+- Smarter AI assistance.
+
+**Any Other Notes:**
+- Although each answer consisted of only one or two words, they were highly valuable because they came from someone with over a decade of freelancing experience.
+- His responses acted as a **validator** for the insights collected from our previous interviews. They confirmed that the major concerns repeatedly identified by freelancers—time, proposal openings, bidding speed, and AI-assisted proposal writing—remain the core pain points, even for experienced professionals.
+
+
 ### Zaid Haris Saigal — 28/06/2025
  
 **Respondent Profile:**
