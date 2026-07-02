@@ -44,7 +44,28 @@ e.g. Frontend developer, 8 months on Upwork, Rising Talent badge
 
 ## 2. Reddit
 
-<!-- Add entries here -->
+
+### Azhar Ali — 02/07/2026
+
+**Respondent Profile:**
+Reddit user (u/Clean-Employment-233), commenting on a freelancing/startup subreddit thread. Skeptical/critical response — included for balance, not cherry-picked positivity.
+
+**Key Quote:**
+> "I believe not getting a response is because of low competency and poor understanding of the current market that changes every 3 months... maybe there are people who can get benefit from your product but tbh that's not a core solution."
+
+**Core Pain Identified:**
+- Disagrees that tooling/bidding mechanics are the root problem — argues the real bottleneck is freelancer competency, outdated portfolios, and not tracking market trends.
+- Implicitly challenges product-market fit: sees this as a symptom-level fix, not a root-cause fix.
+
+**Connects Behaviour:**
+- Not addressed directly — respondent's framing skips connects/bidding cost entirely and goes straight to skill-gap as the cause.
+
+**What They Wished Existed:**
+- Not a feature request — respondent's implied "fix" is freelancer-side (skill development, portfolio quality, staying current on trends) rather than a platform/tool-side fix.
+
+**Any Other Notes:**
+- Useful as a counter-signal. Worth explicitly addressing in messaging/positioning: the co-pilot should be framed as complementary to skill-building, not a replacement for it — otherwise this objection will recur from more experienced freelancers.
+
 
 ---
 
