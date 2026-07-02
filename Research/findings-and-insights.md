@@ -39,6 +39,25 @@ e.g. Frontend developer, 8 months on Upwork, Rising Talent badge
 ## 1. LinkedIn Outreach
 
 <!-- Add entries here -->
+### Zaid Haris Saigal — 28/06/2025
+ 
+**Respondent Profile:**
+Salma Zahid — reached out via LinkedIn post. Experience level not specified but had enough history to observe a clear before/after in her proposal strategy.
+ 
+**Key Quote:**
+> "When I started bidding, response rate was around 10–15%. Most clients ignored generic proposals — after I started customizing each proposal with their samples, it improved."
+ 
+**Core Pain Identified:**
+Two distinct pains surfaced. First, low response rates caused by generic proposals — solved only after she manually started tailoring each one, which is time-intensive. Second, and more financially damaging: underquoting. She priced herself too low, won the project, got stuck delivering at a loss, and lost the contract.
+ 
+**Connects Behaviour:**
+Not directly discussed.
+ 
+**What They Wished Existed:**
+Not explicitly stated. Implied need: guidance on correct market pricing before submitting a bid, and a way to make proposals feel personalized without the manual effort of researching each client individually.
+ 
+**Any Other Notes:**
+The underquoting pattern is significant — this isn't just a time cost, it's a direct income loss. Winning a project at the wrong price is worse than not winning it at all. This validates the Pricer component of the product as a high-value feature, not just a nice-to-have.
 
 ---
 
@@ -136,7 +155,42 @@ Pakixto Advanced Marketing — member of "Students StartUp & Freelancer" WhatsAp
 
 - Second respondent independently raises the same theme as the first (marketplace fairness/cost), which strengthens this as a validated pattern rather than a one-off complaint.
 
-
+### Zaid Haris Saigal — 27/06/2025 · Poll Results
+ 
+**Poll Question:** What is the hardest part of applying for a new job on Upwork right now?
+ 
+| Option | Votes |
+|--------|-------|
+| Finding a job posting that isn't a scam or spam | 1 |
+| Knowing exactly how much to bid | — |
+| Writing a unique proposal that stands out | — |
+| Spending too much unbillable time on the whole process | — |
+ 
+**Observation:**
+Low poll participation overall. The one vote cast pointed to job legitimacy as the primary concern — validating that lead qualification (filtering scam/spam postings) is a real friction point even before the proposal stage is reached.
+ 
+---
+ 
+### Zaid Haris Saigal — 27/06/2025 · 1:1 Interview (Experienced Freelancer)
+ 
+**Respondent Profile:**
+Danish Anwaar (Experienced Upwork freelancer), has done significant volume of work on the platform.
+ 
+**Key Quote:**
+> "Client zaida tar job post karne ke kuch minute tak sahi active hota hai — usi time agar proposal kar do to chance bht barh jaty hain."
+> *(Clients are most active in the first few minutes after posting — submitting early significantly increases your chances.)*
+ 
+**Core Pain Identified:**
+Timing of proposal submission is a bigger factor than proposal quality. The window to get visibility is extremely narrow. Separately, clients consistently lowballed on price, making fair compensation difficult.
+ 
+**Connects Behaviour:**
+Not directly discussed, but the emphasis on submitting within minutes of posting implies connects are being spent reactively rather than strategically — applying fast, not applying smart.
+ 
+**What They Wished Existed:**
+Not explicitly stated. Implied need: real-time alerts for new job postings that match their profile so they can act within the early window without manually monitoring the feed.
+ 
+**Any Other Notes:**
+Respondent's view that "it all gets better with time" suggests learned helplessness — inefficiencies accepted as part of the process rather than something a tool could fix. Common pattern among experienced freelancers who have built personal workarounds and stopped expecting solutions.
 
 ---
 
@@ -167,6 +221,25 @@ Shahzaib — Digital Marketer & Automation Expert with 2 years of experience on 
 - Shahzaib mentioned that proposal writing itself is less of a challenge today because many AI-powered and online tools help freelancers create effective proposals. However, he believes that experience and a strong skill set remain the key factors in winning clients.
 
 ---
+### Zaid Haris Saigal — 29/06/2025
+ 
+**Respondent Profile:**
+Experienced Upwork freelancer, high volume of past work on the platform, has since stopped applying entirely.
+ 
+**Key Quote:**
+> "The market is completely dead. Proposals on a project get filled almost instantly and connects have caused a bidding war — freelancers are spending more just to get their proposal on top, which means spending more rather than earning more."
+ 
+**Core Pain Identified:**
+The connects system has inverted the economics of freelancing. What was meant to filter serious applicants has become a pay-to-be-seen mechanism. Boosting proposals to the top costs additional connects on top of the base application cost, creating a bidding war for visibility — entirely separate from the actual quality of work being offered.
+ 
+**Connects Behaviour:**
+Actively aware of the connects cost problem. Stopped using the platform altogether because the spend-to-earn ratio made it financially irrational to keep applying.
+ 
+**What They Wished Existed:**
+Not stated. Implied need: a way to know which jobs are genuinely worth spending connects on before committing — so that the connects budget is spent on winnable opportunities, not visibility auctions.
+ 
+**Any Other Notes:**
+This is the strongest signal yet for the core product hypothesis. A freelancer with real skill and real experience has been priced out of the platform — not by competitors with better skills, but by a broken incentive system. If the product can demonstrably improve connects ROI, this profile of user has strong motivation to return to the platform.
 
 ## 5. Other
 
