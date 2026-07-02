@@ -45,7 +45,7 @@ e.g. Frontend developer, 8 months on Upwork, Rising Talent badge
 ## 2. Reddit
 
 
-### Azhar Ali — 02/07/2026
+### Azhar Ali — 27/06/2026
 
 **Respondent Profile:**
 Reddit user (u/Clean-Employment-233), commenting on a freelancing/startup subreddit thread. Skeptical/critical response — included for balance, not cherry-picked positivity.
