@@ -39,6 +39,28 @@ e.g. Frontend developer, 8 months on Upwork, Rising Talent badge
 ## 1. LinkedIn Outreach
 
 <!-- Add entries here -->
+### Azhar Ali — 29/06/2026
+
+**Respondent Profile:**
+Sohaib Ilyas — 2nd-degree LinkedIn connection, commented on a post promoting a competing product ("GigUp – Never Miss Your Perfect Upwork Job Again").
+
+**Key Quote:**
+> "The biggest confidence killer is wasting connects on jobs that were never a good fit."
+
+**Core Pain Identified:**
+- Wasting connects on poorly-matched jobs isn't just a financial loss — it's framed as a "confidence killer," an emotional/motivational cost.
+- Independently confirms the same connects-wastage pain already raised by our WhatsApp respondents.
+
+**Connects Behaviour:**
+- Actively uses GigUp specifically to pre-filter jobs before spending connects — proof the pain is real enough that freelancers already pay/adopt tools to solve it.
+
+**What They Wished Existed:**
+- Respondent explicitly says "more freelancer tools like this are definitely needed" — signals the market doesn't consider this problem solved yet.
+
+**Any Other Notes:**
+Competitive signal, not just a pain point — worth a follow-up look at GigUp's job-matching feature/pricing so we can differentiate our co-pilot (e.g. going beyond matching into proposal help, ghost-job detection, etc.).
+
+
 ### Muhammad Rafay — 30/06/2026
 
 **Respondent Profile:**  
@@ -128,70 +150,30 @@ Reddit user (u/Clean-Employment-233), commenting on a freelancing/startup subred
 
 ## 3. WhatsApp Group Polls
 
-### Azhar Ali — 28/06/2026
+### Azhar Ali — 28/06/2026 & 02/07/2026
 
 **Respondent Profile:**
-Pakixto Advanced Marketing — member of "Students StartUp & Freelancer" WhatsApp group, beginner-level freelancer.
+Pakixto Advanced Marketing + Gul Fatimah — both from "Students StartUp & Freelancer" WhatsApp group poll (3-question format), beginner-level freelancers.
 
 **Key Quote:**
-> "I spend 10k on 10 projects with no guarantees to win them even client didn't open them."
+> "I spend 10k on 10 projects with no guarantees to win them even client didn't open them." — Pakixto
+> "Individual freelancers cannot keep up with agencies who bid with 100+ connects." — Gul Fatimah
 
 **Core Pain Identified:**
-- Cost of paid proposals/connects is a major barrier for beginners — cites ~1000 PKR per job on average as prohibitively expensive.
-- No guarantee of return: money is spent on bids that clients don't even open, let alone review.
-- Believes rejection is less about proposal quality and more about clients not opening/reviewing proposals at all.
+- Freelancers pay upfront for connects/bids with no guarantee the client even opens the proposal — cost is charged for attention, not outcome.
+- Pakixto's angle: individual financial risk — 10k PKR spent across 10 bids, zero return, proposals not even opened.
+- Gul Fatimah's angle: structural unfairness — can't compete with agencies bidding 100+ connects or "boosted" proposals; also flags ghost job postings.
 
 **Connects Behaviour:**
-- Spends heavily (10k PKR across 10 projects) with no visibility into whether the client engaged with the proposal at all.
+Both spend connects with no visibility into client engagement, and no way to avoid agencies/boosted bidders outranking them regardless of proposal quality.
 
 **What They Wished Existed:**
-- More flexible, less "costly" bidding structures from marketplaces.
-- Pay-on-selection model: charge freelancers for bidding only if they're actually selected, not upfront.
+- Pay-on-selection pricing (charge only if selected, not upfront).
+- Employer accountability for ghost job postings.
+- Fairer bidding — disable boosted proposals.
 
 **Any Other Notes:**
-- Strong pricing/risk pain point — this respondent frames the core issue as marketplace economics (cost-to-bid), not proposal-writing skill.
-
-### Azhar Ali — 02/07/2026
-
-
-
-**Respondent Profile:**
-
- Gul Fatimah in Same "Students StartUp & Freelancer" WhatsApp group poll (3-question format). 
-
-
-
-**Key Quote:**
-
-> "Individual freelancers cannot keep up with agencies who bid with 100+ connects."
-
-
-
-**Core Pain Identified:**
-
-- Competing against agencies with far larger connects budgets makes it structurally hard for individual freelancers to win bidding wars.
-
-- Proposals get ignored even with good ratings — attributes this to employers posting jobs and then never following through (ghost jobs), not proposal quality.
-
-
-
-**Connects Behaviour:**
-
-- Frames the problem at the marketplace level: "boosted proposals" let some bidders pay to rank higher, further disadvantaging individual freelancers.
-
-
-
-**What They Wished Existed:**
-
-- Accountability mechanism for employers to reduce ghost job postings.
-
-- Fairer bidding — specifically, disabling "boosted" proposals so visibility isn't pay-to-win.
-
-
-
-**Any Other Notes:**
-
-- Second respondent independently raises the same theme as the first (marketplace fairness/cost), which strengthens this as a validated pattern rather than a one-off complaint.
+Same core theme raised independently by two respondents — validates "wasted bidding spend" as a real, repeated pain rather than a one-off complaint.
 
 ### Zaid Haris Saigal — 27/06/2025 · Poll Results
  
@@ -281,4 +263,29 @@ This is the strongest signal yet for the core product hypothesis. A freelancer w
 
 ## 5. Other
 
+## Competitor Product Users' Reviews Research
+
+### Azhar Ali — 03/07/2026
+
+**Respondent Profile:**
+Aggregated Chrome Web Store reviews for Upwex (AI Tools for Upwork) — competitor product, 1,000+ users, 4.4/5 from 21 reviews (Jul 2023–Jun 2026). Competitor benchmarking, not primary user research.
+
+**Key Quote:**
+> "I used to spend a lot of time on job reviews, now everything goes much faster."
+
+**Core Pain Identified (validated via competitor's own users):**
+- Time spent reviewing jobs and writing proposals is a real, monetizable pain — matches what our own respondents (Pakixto, Shahzaib) already told us.
+- Recurring complaint: "Sync Profile" button just redirects to the Upwork page instead of completing sync — reported by multiple users from 2024 through 2026, unresolved despite the developer calling it "by design."
+
+**Connects Behaviour:**
+Not directly addressed — Upwex focuses more on autobidding and proposal drafting speed rather than connects cost itself.
+
+**What Users Value (competitor's strengths):**
+- Autobidding + AI-drafted proposals save time on job review/writing.
+- Consolidated analytics — users say it beats Upwork's native stats.
+- CRM-style automation valued by teams/agencies, not just solo freelancers.
+
+**Any Other Notes:**
+- If our co-pilot ever integrates with Upwork accounts, profile-sync reliability is a proven weak spot for this competitor — a clear chance to differentiate by doing it right.
+- Treat as competitor benchmarking only, not our own respondent data.
 <!-- Add entries here -->
