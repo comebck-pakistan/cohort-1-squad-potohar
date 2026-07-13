@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Connects Budget Optimizer",
+  "version": "1.0.0",
+  "description": "Qualify Upwork job viability and save money before spending connects.",
+  "permissions": [],
+  "host_permissions": [
+    "https://*.upwork.com/*",
+    "https://generativelanguage.googleapis.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.upwork.com/jobs/*",
+        "https://*.upwork.com/ab/jobs/*",
+        "https://*.upwork.com/nx/find-work/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
