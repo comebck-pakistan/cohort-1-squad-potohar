@@ -1,0 +1,202 @@
+import type { PlasmoCSConfig } from "plasmo"
+import cssText from "data-text:~/style.css"
+import React, { useEffect, useState } from "react"
+
+import {
+  type AiAction,
+  type AiActionResult,
+  requestBackendAction
+} from "../modules/api/backendClient"
+import { calculateScore } from "../modules/decision-engine/calculateScore"
+import type {
+  DecisionResult,
+  ExtractedJobData,
+  FreelancerProfile
+} from "../modules/decision-engine/decisionTypes"
+import { extractJobData } from "../modules/extraction/extractJobData"
+import {
+  getProfile,
+  logLocalEvent,
+  saveProfile
+} from "../modules/profile/profileStorage"
+import { FloatingOverlay } from "../modules/ui/FloatingOverlay"
+import { JobScorePanel } from "../modules/ui/JobScorePanel"
+import { ProfileSetup } from "../modules/ui/ProfileSetup"
+
+export const config: PlasmoCSConfig = {
+  matches: [
+    "https://*.upwork.com/jobs/*",
+    "https://*.upwork.com/ab/jobs/*",
+    "https://*.upwork.com/nx/find-work/*"
+  ],
+  run_at: "document_idle"
+}
+
+export const getStyle = () => {
+  const style = document.createElement("style")
+  style.textContent = cssText
+  return style
+}
+
+export default function UpworkJobOverlay() {
+  const [isJobPage, setIsJobPage] = useState(false)
+  const [url, setUrl] = useState("")
+  const [profile, setProfile] = useState<FreelancerProfile | null>(null)
+  const [jobData, setJobData] = useState<ExtractedJobData | null>(null)
+  const [decision, setDecision] = useState<DecisionResult | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [editingProfile, setEditingProfile] = useState(false)
+  const [loadingAction, setLoadingAction] = useState<AiAction | null>(null)
+  const [aiResult, setAiResult] = useState<AiActionResult | null>(null)
+  const [aiError, setAiError] = useState<string | null>(null)
+
+  useEffect(() => {
+    getProfile().then((storedProfile) => {
+      setProfile(storedProfile)
+      setLoading(false)
+    })
+  }, [])
+
+  useEffect(() => {
+    const checkCurrentPage = () => {
+      const currentUrl = window.location.href
+      const isJob =
+        currentUrl.includes("~") || currentUrl.includes("/jobs/")
+
+      if (isJob === isJobPage && currentUrl === url) return
+
+      setIsJobPage(isJob)
+      setUrl(currentUrl)
+      setAiError(null)
+      setAiResult(null)
+
+      if (!isJob) {
+        setJobData(null)
+        setDecision(null)
+        return
+      }
+
+      if (!profile) return
+
+      window.setTimeout(() => {
+        const extracted = extractJobData(document.body.innerText)
+        const nextDecision = calculateScore(extracted, profile)
+
+        setJobData(extracted)
+        setDecision(nextDecision)
+        logScoreEvent(nextDecision, extracted)
+      }, 1000)
+    }
+
+    checkCurrentPage()
+
+    const clickListener = () => window.setTimeout(checkCurrentPage, 50)
+    document.addEventListener("click", clickListener)
+    const interval = window.setInterval(checkCurrentPage, 1000)
+
+    return () => {
+      window.clearInterval(interval)
+      document.removeEventListener("click", clickListener)
+    }
+  }, [isJobPage, profile, url])
+
+  useEffect(() => {
+    if (jobData && profile) {
+      setDecision(calculateScore(jobData, profile))
+    }
+  }, [jobData, profile])
+
+  if (!isJobPage) return null
+
+  const handleSaveProfile = async (newProfile: FreelancerProfile) => {
+    await saveProfile(newProfile)
+    setProfile(newProfile)
+    setEditingProfile(false)
+
+    if (url) {
+      const extracted = extractJobData(document.body.innerText)
+      setJobData(extracted)
+    }
+  }
+
+  const handleRequestAI = async (action: AiAction) => {
+    if (!profile || !jobData || !decision || decision.decision === "Skip") return
+
+    setLoadingAction(action)
+    setAiError(null)
+    setAiResult(null)
+
+    try {
+      await logLocalEvent("ai_action_requested", {
+        action,
+        score: decision.score,
+        decision: decision.decision,
+        sourcePlatform: jobData.sourcePlatform
+      })
+
+      const result = await requestBackendAction(action, {
+        decision,
+        freelancerProfile: profile,
+        jobData
+      })
+
+      setAiResult(result)
+    } catch (error) {
+      setAiError(
+        error instanceof Error
+          ? error.message
+          : "Could not reach the backend service."
+      )
+    } finally {
+      setLoadingAction(null)
+    }
+  }
+
+  return (
+    <FloatingOverlay onClose={() => setIsJobPage(false)}>
+      {loading ? (
+        <div className="text-sm text-slate-500">Loading...</div>
+      ) : !profile || editingProfile ? (
+        <ProfileSetup initialProfile={profile} onSave={handleSaveProfile} />
+      ) : !decision || !jobData ? (
+        <div className="flex items-center gap-2 text-[13px] text-slate-700">
+          <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-blue-500 border-t-transparent"></div>
+          Reading job page...
+        </div>
+      ) : (
+        <JobScorePanel
+          aiError={aiError}
+          aiResult={aiResult}
+          decision={decision}
+          jobData={jobData}
+          loadingAction={loadingAction}
+          onEditProfile={() => setEditingProfile(true)}
+          onJobDataChange={setJobData}
+          onRequestAI={handleRequestAI}
+        />
+      )}
+    </FloatingOverlay>
+  )
+}
+
+function logScoreEvent(
+  decision: DecisionResult,
+  jobData: ExtractedJobData
+): void {
+  const metadata = {
+    score: decision.score,
+    decision: decision.decision,
+    sourcePlatform: jobData.sourcePlatform,
+    budgetType: jobData.budgetType,
+    budgetAmount: jobData.budgetAmount
+  }
+
+  logLocalEvent("job_scored", metadata)
+
+  if (decision.decision === "Skip") {
+    logLocalEvent("job_skipped", {
+      ...metadata,
+      reason: decision.reason
+    })
+  }
+}

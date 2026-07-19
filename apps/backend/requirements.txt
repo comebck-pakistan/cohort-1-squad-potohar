@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+pydantic
+supabase
+anthropic
+pytest
+ruff
+black
+python-dotenv
