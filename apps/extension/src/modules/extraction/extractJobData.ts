@@ -1,4 +1,4 @@
-import type { ExtractedJobData } from "../../../../../packages/shared/src/types"
+import type { ExtractedJobData } from "@shared/types"
 import {
   detectOffPlatformFlag,
   detectUnpaidTestFlag,

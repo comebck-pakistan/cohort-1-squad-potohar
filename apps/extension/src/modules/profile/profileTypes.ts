@@ -1,1 +1,1 @@
-export type { FreelancerProfile } from "../../../../../packages/shared/src/types"
+export type { FreelancerProfile } from "@shared/types"

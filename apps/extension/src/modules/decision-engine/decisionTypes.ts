@@ -2,4 +2,4 @@ export type {
   DecisionResult,
   ExtractedJobData,
   FreelancerProfile
-} from "../../../../../packages/shared/src/types"
+} from "@shared/types"

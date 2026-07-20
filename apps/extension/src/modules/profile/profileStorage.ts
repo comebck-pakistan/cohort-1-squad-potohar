@@ -35,3 +35,8 @@ export async function logLocalEvent(
 
   await chrome.storage.local.set({ [EVENTS_KEY]: events })
 }
+
+export async function getLocalEvents(): Promise<LocalEvent[]> {
+  const values = await chrome.storage.local.get(EVENTS_KEY)
+  return (values[EVENTS_KEY] as LocalEvent[] | undefined) ?? []
+}

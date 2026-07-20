@@ -48,6 +48,31 @@ We have successfully reached out to 10+ freelancers this week, and two of our sq
 
 ---
 
+## 🚀 Project Architecture & Local Setup
+
+This project consists of two main applications:
+1. **Extension:** A Chrome extension built with Plasmo, React, and Tailwind that overlays on Upwork job pages.
+2. **Backend:** A FastAPI backend that proxies requests to Anthropic LLMs and persists data to Supabase.
+
+### Setting up the Backend
+```bash
+cd apps/backend
+pip install -r requirements.txt
+cp .env.example .env # Add your API keys if you want real AI actions
+python -m uvicorn app.main:app --reload
+```
+*Note: If `.env` is missing or uses `replace_me` placeholders, the backend gracefully returns mocked AI responses so the extension can still be demoed.*
+
+### Setting up the Extension
+```bash
+cd apps/extension
+npm install
+npm run dev
+```
+Then load the `apps/extension/build/chrome-mv3-dev` folder into Chrome (`chrome://extensions` > "Load unpacked").
+
+---
+
 ## 🚀 Getting Started — Clone & Contribute
 
 Follow these steps to get this repo on your machine and start contributing code.

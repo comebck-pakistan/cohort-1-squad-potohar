@@ -1,6 +1,6 @@
 import React, { useState } from "react"
 
-import { SKILL_TAXONOMY } from "../../../../../packages/shared/src/skillTaxonomy"
+import { SKILL_TAXONOMY } from "@shared/skillTaxonomy"
 import type { FreelancerProfile } from "../profile/profileTypes"
 
 interface Props {

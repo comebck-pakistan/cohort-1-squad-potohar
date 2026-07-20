@@ -1,6 +1,8 @@
 export function parseProposalCount(text: string): number | null {
+  // Completely relaxed regex: just find the standard Upwork proposal brackets anywhere in the text
+  // since the word "proposals" might be separated by lots of UI elements.
   const match = text.match(
-    /(less than 5|5 to 10|10 to 15|15 to 20|20 to 50|50\+)\s*proposals?/i
+    /(less than 5|5 to 10|10 to 15|15 to 20|20 to 50|50\+)/i
   )
 
   if (!match) return null
@@ -48,8 +50,9 @@ export function parseBudget(text: string): {
   budgetAmount: number | null
   budgetType: "hourly" | "fixed" | "unknown"
 } {
+  // Relaxed hourly: look for any $amount followed by hr, hour, or hourly anywhere nearby
   const hourlyRange = text.match(
-    /\$\s*(\d+(?:,\d+)?(?:\.\d+)?)\s*-\s*\$\s*(\d+(?:,\d+)?(?:\.\d+)?)\s*\/?\s*hr/i
+    /\$\s*(\d+(?:,\d+)?(?:\.\d+)?)\s*-\s*\$\s*(\d+(?:,\d+)?(?:\.\d+)?).*?(?:hr|hour|hourly)/i
   )
 
   if (hourlyRange) {
@@ -62,7 +65,7 @@ export function parseBudget(text: string): {
   }
 
   const hourlySingle = text.match(
-    /\$\s*(\d+(?:,\d+)?(?:\.\d+)?)\s*\/?\s*hr/i
+    /\$\s*(\d+(?:,\d+)?(?:\.\d+)?).*?(?:hr|hour|hourly)/i
   )
 
   if (hourlySingle) {
@@ -72,14 +75,13 @@ export function parseBudget(text: string): {
     }
   }
 
-  const fixedContext = /\bfixed[-\s]?price\b|\bbudget\b/i.test(text)
-  const fixedAmount = text.match(
-    /(?:fixed[-\s]?price|budget|est\.\s*budget)\D{0,40}\$\s*(\d+(?:,\d+)?(?:\.\d+)?)/i
-  )
-
-  if (fixedContext && fixedAmount) {
+  // Relaxed fixed price: look for the first dollar amount that appears in the text
+  // Upwork almost always lists the budget with a $ sign.
+  const fixedMatch = text.match(/\$\s*(\d+(?:,\d+)?(?:\.\d+)?)/)
+  
+  if (fixedMatch) {
     return {
-      budgetAmount: parseMoney(fixedAmount[1]),
+      budgetAmount: parseMoney(fixedMatch[1]),
       budgetType: "fixed"
     }
   }
@@ -93,8 +95,8 @@ export function parseBudget(text: string): {
 export function parsePaymentVerified(
   text: string
 ): "yes" | "no" | "unknown" {
-  if (/\bpayment\s+verified\b/i.test(text)) return "yes"
-  if (/\bpayment\s+unverified\b|\bpayment\s+not\s+verified\b/i.test(text)) {
+  if (/\bpayment(?:\s+method)?\s+verified\b/i.test(text)) return "yes"
+  if (/\bpayment(?:\s+method)?\s+(?:unverified|not\s+verified)\b/i.test(text)) {
     return "no"
   }
 
@@ -102,7 +104,8 @@ export function parsePaymentVerified(
 }
 
 export function parseClientRating(text: string): number | null {
-  const match = text.match(/(\d(?:\.\d{1,2})?)\s*(?:of|\/)\s*5/i)
+  // Matches "4.89 of 5" OR "4.89 (10 reviews)" OR "4.89 stars"
+  const match = text.match(/([1-5](?:\.\d{1,2})?)\s*(?:of\s*5|out\s*of\s*5|stars?|\(?[0-9,]+\s*reviews?\)?)/i)
   if (!match) return null
 
   const rating = Number(match[1])

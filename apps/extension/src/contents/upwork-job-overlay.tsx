@@ -78,14 +78,42 @@ export default function UpworkJobOverlay() {
 
       if (!profile) return
 
-      window.setTimeout(() => {
-        const extracted = extractJobData(document.body.innerText)
-        const nextDecision = calculateScore(extracted, profile)
+      // Use a polling mechanism to handle slow-loading sliders in Upwork's SPA
+      let attempts = 0
+      const extractInterval = window.setInterval(() => {
+        attempts++
 
-        setJobData(extracted)
-        setDecision(nextDecision)
-        logScoreEvent(nextDecision, extracted)
-      }, 1000)
+        const getActiveJobText = () => {
+          // Priority 1: Job slider (Upwork search page)
+          const slider = document.querySelector('.up-slider, .air3-slider, [data-test="job-details-slider"], [role="dialog"]')
+          if (slider) {
+            return (slider as HTMLElement).innerText || ""
+          }
+          // Priority 2: Main container (Dedicated job page)
+          const main = document.querySelector('main')
+          if (main) {
+            return (main as HTMLElement).innerText || ""
+          }
+          // Priority 3: Fallback
+          return document.body.innerText
+        }
+
+        const pageText = getActiveJobText()
+        
+        // Wait until the text is reasonably long (meaning the skeleton loaders are gone)
+        // or if we've tried for 5 seconds (10 attempts * 500ms)
+        const isLoaded = pageText.length > 300 || attempts >= 10
+
+        if (isLoaded) {
+          window.clearInterval(extractInterval)
+          const extracted = extractJobData(pageText)
+          const nextDecision = calculateScore(extracted, profile)
+
+          setJobData(extracted)
+          setDecision(nextDecision)
+          logScoreEvent(nextDecision, extracted)
+        }
+      }, 500)
     }
 
     checkCurrentPage()

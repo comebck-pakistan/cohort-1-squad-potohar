@@ -6,12 +6,16 @@
   "include": [
     ".plasmo/index.d.ts",
     "./**/*.ts",
-    "./**/*.tsx"
+    "./**/*.tsx",
+    "../../packages/shared/**/*.ts"
   ],
   "compilerOptions": {
     "paths": {
       "~*": [
-        "./*"
+        "./src/*"
+      ],
+      "@shared/*": [
+        "../../packages/shared/src/*"
       ]
     },
     "baseUrl": "."
