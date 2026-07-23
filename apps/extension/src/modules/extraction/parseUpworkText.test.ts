@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "vitest"
+import { describe, expect, test } from "vitest"
 
 import {
   detectOffPlatformFlag,
@@ -76,6 +76,11 @@ describe("parsePostedAt", () => {
     expect(result).toBe("2026-07-19T10:00:00.000Z")
   })
 
+  test("hours ago without posted label", () => {
+    const result = parsePostedAt("2 hours ago", now)
+    expect(result).toBe("2026-07-19T10:00:00.000Z")
+  })
+
   test("posted 1 hour ago (singular)", () => {
     const result = parsePostedAt("Posted 1 hour ago", now)
     expect(result).toBe("2026-07-19T11:00:00.000Z")
@@ -136,10 +141,28 @@ describe("parseBudget", () => {
     expect(result.budgetAmount).toBe(75)
   })
 
+  test("hourly rate with range and label", () => {
+    const result = parseBudget("Budget: $12 - $15 hourly rate")
+    expect(result.budgetType).toBe("hourly")
+    expect(result.budgetAmount).toBe(14)
+  })
+
+  test("hourly rate with per hour wording", () => {
+    const result = parseBudget("Rate: $12 to $15 per hour")
+    expect(result.budgetType).toBe("hourly")
+    expect(result.budgetAmount).toBe(14)
+  })
+
   test("fixed-price with budget label", () => {
     const result = parseBudget("Fixed-price Budget: $1,500")
     expect(result.budgetType).toBe("fixed")
     expect(result.budgetAmount).toBe(1500)
+  })
+
+  test("does not confuse total spent with budget", () => {
+    const result = parseBudget("$25k+ total spent")
+    expect(result.budgetType).toBe("unknown")
+    expect(result.budgetAmount).toBeNull()
   })
 
   test("est. budget label", () => {
@@ -152,6 +175,12 @@ describe("parseBudget", () => {
     const result = parseBudget("Budget: $99.50 Fixed-price")
     expect(result.budgetType).toBe("fixed")
     expect(result.budgetAmount).toBe(99.5)
+  })
+
+  test("hourly wins over budget wording", () => {
+    const result = parseBudget("Budget: $12-$15 hourly")
+    expect(result.budgetType).toBe("hourly")
+    expect(result.budgetAmount).toBe(14)
   })
 
   test("returns unknown when no budget found", () => {
@@ -204,6 +233,10 @@ describe("parseClientRating", () => {
 
   test("X/5 format", () => {
     expect(parseClientRating("Rating: 4.5/5")).toBe(4.5)
+  })
+
+  test("X/5 format without label", () => {
+    expect(parseClientRating("4.5/5")).toBe(4.5)
   })
 
   test("whole number", () => {

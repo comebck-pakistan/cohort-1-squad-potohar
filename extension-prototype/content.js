@@ -1,198 +1,358 @@
-console.log("⚙️ Connects Optimizer: SPA State Machine & Responsive UI Loaded");
+console.log("Connects Optimizer: staged pipeline overlay loaded");
 
 let lastProcessedUrl = "";
 
-// ⚡ NEW: Instant Cleanup Function
 function checkAndCleanUp() {
-    const currentUrl = window.location.href;
-    const isJobPage = currentUrl.includes("~") || currentUrl.includes("/jobs/");
+  const currentUrl = window.location.href;
+  const isJobPage = currentUrl.includes("~") || currentUrl.includes("/jobs/");
 
-    if (!isJobPage) {
-        if (lastProcessedUrl !== "") {
-            // console.log("🧹 User left job page. Instantly cleaning up widget.");
-            removeWidget();
-            lastProcessedUrl = ""; // Reset state for the next job
-        }
-        return true;
+  if (!isJobPage) {
+    if (lastProcessedUrl !== "") {
+      removeWidget();
+      lastProcessedUrl = "";
     }
-    return false;
+    return true;
+  }
+
+  return false;
 }
 
-// ⚡ NEW: Event-Driven Instant Close on Click
 document.addEventListener("click", () => {
-    // Give Upwork's React engine 50ms to update the URL after a click, then check and instantly close
-    setTimeout(checkAndCleanUp, 50);
+  setTimeout(checkAndCleanUp, 50);
 });
 
-// Continuous SPA watcher loop
 setInterval(() => {
-    // If the click listener already cleaned it up, skip this loop
-    if (checkAndCleanUp()) return;
+  if (checkAndCleanUp()) return;
 
-    const currentUrl = window.location.href;
-    const isJobPage = currentUrl.includes("~") || currentUrl.includes("/jobs/");
-    const pageText = document.body.innerText;
+  const currentUrl = window.location.href;
+  const isJobPage = currentUrl.includes("~") || currentUrl.includes("/jobs/");
+  const pageText = document.body.innerText || "";
 
-    // 2. If the user opened a NEW job modal
-    if (isJobPage && currentUrl !== lastProcessedUrl) {
-        // Wait for Upwork's React components to finish rendering the text
-        if (pageText.includes('hire rate') && pageText.includes('spent')) {
-            // console.log("🎯 New job detected. Executing deep scan...");
-            lastProcessedUrl = currentUrl; // Lock it in so we don't scan the same job twice
-            
-            removeWidget(); // Clear any old widget
-            renderUIOverlay({ status: "loading", message: "Extracting job context & running AI analysis..." });
+  if (isJobPage && currentUrl !== lastProcessedUrl) {
+    if (pageText.includes("hire rate") && pageText.includes("spent")) {
+      lastProcessedUrl = currentUrl;
 
-            // 🛡️ SAFETY NET: Catch the "Context Invalidated" error gracefully
-            try {
-                chrome.runtime.sendMessage({ 
-                    type: "ANALYZE_FULL_JOB", 
-                    payload: pageText 
-                }, (response) => {
-                    // Safety check if the connection was lost due to a reload
-                    if (chrome.runtime.lastError) {
-                        console.warn("Connection lost. Please refresh the page.");
-                        return;
-                    }
+      removeWidget();
+      renderUIOverlay({
+        status: "loading",
+        message: "Stage 1/3: extracting job details from the page text..."
+      });
 
-                    if (response && response.success) {
-                        // console.log("⚡ AI Analysis Received");
-                        displayFinalEvaluation(response.data);
-                    } else {
-                        renderUIOverlay({ 
-                            status: "error", 
-                            message: `Analysis Failed: ${response?.error || "Unknown error occurred."}` 
-                        });
-                    }
-                });
-            } catch (error) {
-                console.warn("Extension context invalidated. Please refresh the Upwork tab.", error);
+      try {
+        chrome.runtime.sendMessage(
+          {
+            type: "ANALYZE_FULL_JOB",
+            payload: pageText
+          },
+          (response) => {
+            if (chrome.runtime.lastError) {
+              renderUIOverlay({
+                status: "error",
+                message: "Connection lost. Refresh the page and try again."
+              });
+              return;
             }
-        }
+
+            if (response && response.success) {
+              displayFinalEvaluation(response.data);
+              return;
+            }
+
+            renderUIOverlay({
+              status: "error",
+              message: `Analysis failed: ${response?.error || "Unknown error occurred."}`
+            });
+          }
+        );
+      } catch (error) {
+        renderUIOverlay({
+          status: "error",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Extension context invalidated. Refresh the tab and try again."
+        });
+      }
     }
-}, 1000); // Returned to 1000ms for safety. The click listener handles the instant close!
+  }
+}, 1000);
 
 function removeWidget() {
-    const widget = document.getElementById("connects-optimizer-widget");
-    if (widget) widget.remove();
+  const widget = document.getElementById("connects-optimizer-widget");
+  if (widget) widget.remove();
 }
 
-// Injects custom scrollbar styling to make the widget look native and clean
 function injectScrollbarCSS() {
-    if (!document.getElementById("optimizer-scrollbar-css")) {
-        const style = document.createElement("style");
-        style.id = "optimizer-scrollbar-css";
-        style.innerHTML = `
-            #connects-optimizer-widget::-webkit-scrollbar { width: 6px; }
-            #connects-optimizer-widget::-webkit-scrollbar-track { background: transparent; }
-            #connects-optimizer-widget::-webkit-scrollbar-thumb { background-color: #cbd5e0; border-radius: 10px; }
-            #connects-optimizer-widget { scrollbar-width: thin; scrollbar-color: #cbd5e0 transparent; }
-        `;
-        document.head.appendChild(style);
-    }
+  if (document.getElementById("optimizer-scrollbar-css")) {
+    return;
+  }
+
+  const style = document.createElement("style");
+  style.id = "optimizer-scrollbar-css";
+  style.textContent = `
+    #connects-optimizer-widget::-webkit-scrollbar { width: 6px; }
+    #connects-optimizer-widget::-webkit-scrollbar-track { background: transparent; }
+    #connects-optimizer-widget::-webkit-scrollbar-thumb { background-color: #cbd5e0; border-radius: 10px; }
+    #connects-optimizer-widget { scrollbar-width: thin; scrollbar-color: #cbd5e0 transparent; }
+  `;
+  document.head.appendChild(style);
 }
 
 function renderUIOverlay(uiState) {
-    injectScrollbarCSS();
-    removeWidget(); // Ensure no duplicates
+  injectScrollbarCSS();
+  removeWidget();
 
-    let widget = document.createElement("div");
-    widget.id = "connects-optimizer-widget";
-    // ADDED RESPONSIVENESS: max-height and overflow-y
-    widget.style.cssText = "position: fixed; bottom: 30px; right: 30px; z-index: 999999; padding: 20px; background: #ffffff; border-radius: 14px; box-shadow: 0 12px 35px rgba(0,0,0,0.15); width: 340px; max-height: 85vh; overflow-y: auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; transition: all 0.3s ease; border-left: 6px solid #e0e0e0;";
-    document.body.appendChild(widget);
+  const widget = document.createElement("div");
+  widget.id = "connects-optimizer-widget";
+  widget.style.cssText =
+    "position: fixed; bottom: 30px; right: 30px; z-index: 999999; padding: 20px; background: #ffffff; border-radius: 14px; box-shadow: 0 12px 35px rgba(0,0,0,0.15); width: 360px; max-height: 85vh; overflow-y: auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; transition: all 0.3s ease; border-left: 6px solid #e0e0e0;";
+  document.body.appendChild(widget);
 
-    if (uiState.status === "loading") {
-        widget.style.borderLeftColor = "#3182ce";
-        widget.innerHTML = `
-            <div style="font-weight: bold; font-size: 15px; margin-bottom: 6px; color: #1a202c;">Connects Budget Optimizer</div>
-            <div style="font-size: 13px; color: #4a5568; display: flex; align-items: center; gap: 8px;">
-                <div style="width: 14px; height: 14px; border: 2px solid #3182ce; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
-                ${uiState.message}
-            </div>
-            <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
-        `;
-    } else if (uiState.status === "error") {
-        widget.style.borderLeftColor = "#e53e3e";
-        widget.innerHTML = `
-            <div style="font-weight: bold; font-size: 15px; margin-bottom: 6px; color: #1a202c; display: flex; justify-content: space-between;">
-                <span>Connects Budget Optimizer</span>
-                <span style="cursor: pointer; color: #a0aec0;" onclick="document.getElementById('connects-optimizer-widget').remove()">✕</span>
-            </div>
-            <div style="font-size: 13px; color: #e53e3e;">${uiState.message}</div>
-        `;
-    }
+  if (uiState.status === "loading") {
+    widget.style.borderLeftColor = "#3182ce";
+    widget.innerHTML = `
+      <div style="font-weight: bold; font-size: 15px; margin-bottom: 6px; color: #1a202c;">Connects Budget Optimizer</div>
+      <div style="font-size: 13px; color: #4a5568; display: flex; align-items: center; gap: 8px; line-height: 1.4;">
+        <div style="width: 14px; height: 14px; border: 2px solid #3182ce; border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+        ${escapeHtml(uiState.message)}
+      </div>
+      <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+    `;
+    return;
+  }
+
+  if (uiState.status === "error") {
+    widget.style.borderLeftColor = "#e53e3e";
+    widget.innerHTML = `
+      <div style="font-weight: bold; font-size: 15px; margin-bottom: 6px; color: #1a202c; display: flex; justify-content: space-between; align-items: center;">
+        <span>Connects Budget Optimizer</span>
+        <span style="cursor: pointer; color: #a0aec0;" onclick="document.getElementById('connects-optimizer-widget')?.remove()">&times;</span>
+      </div>
+      <div style="font-size: 13px; color: #e53e3e; line-height: 1.5;">${escapeHtml(uiState.message)}</div>
+    `;
+  }
 }
 
-function displayFinalEvaluation(aiData) {
-    const widget = document.getElementById("connects-optimizer-widget");
-    if (!widget) return;
+function displayFinalEvaluation(result) {
+  const widget = document.getElementById("connects-optimizer-widget");
+  if (!widget) return;
 
-    // --- SAFEGUARD BADGE MAPPER ---
-    const rawVerdict = (aiData.verdict || "CAUTION").toUpperCase().trim();
-    
-    let displayVerdict = "CAUTION";
-    let badgeColor = "#dd6b20"; // Default Orange
+  const extraction = result?.extraction || {};
+  const evaluation = result?.evaluation || {};
+  const proposal = result?.proposal || null;
+  const decision = normalizeDecision(evaluation.decision);
+  const badgeColor = getDecisionColor(decision);
 
-    if (rawVerdict.includes("APPLY")) {
-        displayVerdict = "APPLY";
-        badgeColor = "#14a800"; // Green
-    } else if (rawVerdict.includes("SKIP") || rawVerdict.includes("RISK")) {
-        displayVerdict = "SKIP";
-        badgeColor = "#e53e3e"; // Red
-    } else if (rawVerdict.includes("CAUTION")) {
-        displayVerdict = "CAUTION";
-        badgeColor = "#dd6b20"; // Orange
-    } else {
-        displayVerdict = "CAUTION";
-        badgeColor = "#dd6b20"; 
-    }
+  widget.style.borderLeftColor = badgeColor;
 
-    widget.style.borderLeftColor = badgeColor;
-    // ------------------------------
-
-    const renderBullets = (bullets) => {
-        if (!bullets || bullets.length === 0) return '';
-        return `<ul style="margin: 6px 0 0 0; padding-left: 20px; color: #4a5568; list-style-type: disc;">
-            ${bullets.map(b => `<li style="margin-bottom: 4px;">${b}</li>`).join('')}
-        </ul>`;
-    };
-
-    // ⚡ NEW: Conditional Rendering Logic for Hooks
-    // Only generate the hooks HTML if the verdict is NOT "SKIP"
-    const hooksSectionHTML = displayVerdict === "SKIP" ? "" : `
-        <div>
-            <div style="font-size: 11px; font-weight: 800; color: #718096; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px;">High-Impact Hooks</div>
-            ${(aiData.hooks || []).map(hook => `<div style="font-size: 13px; color: #1a202c; background: #f7fafc; padding: 10px 12px; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 8px; font-style: italic; line-height: 1.4; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">"${hook}"</div>`).join('')}
-        </div>
-    `;
-
-    widget.innerHTML = `
-        <div style="font-weight: bold; font-size: 15px; margin-bottom: 12px; color: #1a202c; display: flex; justify-content: space-between; align-items: center;">
-            <span>Connects Optimizer</span>
-            <div>
-                <span style="font-size: 11px; padding: 3px 10px; border-radius: 20px; color: #fff; background: ${badgeColor}; font-weight: 800; margin-right: 8px; letter-spacing: 0.5px;">${displayVerdict}</span>
-                <span style="cursor: pointer; color: #a0aec0; font-size: 16px;" onclick="document.getElementById('connects-optimizer-widget').remove()">✕</span>
-            </div>
-        </div>
-        
+  const prosHtml = renderBulletList(evaluation.pros);
+  const consHtml = renderBulletList(evaluation.cons);
+  const proposalHtml =
+    decision !== "Skip" && proposal && typeof proposal.proposal === "string"
+      ? `
         <div style="margin-bottom: 14px;">
-            <div style="font-size: 11px; font-weight: 800; color: #718096; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px;">Audit Breakdown</div>
-            <div style="font-size: 13px; color: #2d3748; line-height: 1.5;">
-                <strong style="color: #1a202c;">${aiData.auditSummary}</strong>
-                ${renderBullets(aiData.auditBullets)}
-            </div>
+          <div style="font-size: 11px; font-weight: 800; color: #718096; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px;">Proposal Draft</div>
+          <div style="font-size: 13px; color: #2d3748; line-height: 1.6; white-space: pre-wrap; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">${escapeHtml(
+            proposal.proposal
+          )}</div>
         </div>
-
         <div style="margin-bottom: 14px;">
-            <div style="font-size: 11px; font-weight: 800; color: #718096; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px;">Budget Realism</div>
-            <div style="font-size: 13px; color: #2d3748; line-height: 1.5;">
-                <strong style="color: #1a202c;">${aiData.budgetSummary}</strong>
-                ${renderBullets(aiData.budgetBullets)}
-            </div>
+          <div style="font-size: 11px; font-weight: 800; color: #718096; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px;">Why It Fits</div>
+          <div style="font-size: 13px; color: #2d3748; line-height: 1.6;">${escapeHtml(
+            proposal.fitExplanation || ""
+          )}</div>
         </div>
+      `
+      : "";
 
-        ${hooksSectionHTML}
-    `;
+  const extractionHtml = renderExtractionSection(extraction);
+  const warningHtml =
+    result?.proposalError && decision !== "Skip"
+      ? `
+        <div style="margin-bottom: 14px; border: 1px solid #fed7d7; background: #fff5f5; color: #c53030; border-radius: 8px; padding: 10px 12px; font-size: 12px; line-height: 1.5;">
+          Proposal generation failed: ${escapeHtml(result.proposalError)}
+        </div>
+      `
+      : "";
 
+  widget.innerHTML = `
+    <div style="font-weight: bold; font-size: 15px; margin-bottom: 12px; color: #1a202c; display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+      <span>Connects Optimizer</span>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 11px; padding: 3px 10px; border-radius: 20px; color: #fff; background: ${badgeColor}; font-weight: 800; letter-spacing: 0.5px;">${escapeHtml(
+          decision
+        )}</span>
+        <span style="cursor: pointer; color: #a0aec0; font-size: 16px;" onclick="document.getElementById('connects-optimizer-widget')?.remove()">&times;</span>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 14px;">
+      <div style="font-size: 11px; font-weight: 800; color: #718096; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px;">Evaluation</div>
+      <div style="font-size: 13px; color: #2d3748; line-height: 1.5;">
+        <strong style="color: #1a202c;">Score ${escapeHtml(formatScore(evaluation.score))}</strong>
+        <span style="color: #718096;"> | Confidence ${escapeHtml(
+          formatConfidence(evaluation.confidence)
+        )}</span>
+        <div style="margin-top: 6px;">${escapeHtml(evaluation.reasoning || "")}</div>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 14px;">
+      <div style="font-size: 11px; font-weight: 800; color: #718096; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px;">Pros</div>
+      ${prosHtml}
+    </div>
+
+    <div style="margin-bottom: 14px;">
+      <div style="font-size: 11px; font-weight: 800; color: #718096; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px;">Cons</div>
+      ${consHtml}
+    </div>
+
+    ${warningHtml}
+    ${proposalHtml}
+    ${extractionHtml}
+  `;
+}
+
+function renderExtractionSection(extraction) {
+  const rows = [
+    ["Title", extraction.title],
+    ["Description", extraction.description],
+    ["Budget type", extraction.budgetType],
+    ["Budget amount", extraction.budgetAmount],
+    ["Experience level", extraction.experienceLevel],
+    ["Payment verified", extraction.paymentVerified],
+    ["Proposal range", extraction.proposalRange],
+    ["Posted", extraction.postedAt],
+    ["Proposal count", extraction.proposalCount],
+    ["Client hire rate", extraction.client?.hireRate],
+    ["Client total spent", extraction.client?.totalSpent],
+    ["Client country", extraction.client?.country]
+  ].filter(([, value]) => hasValue(value));
+
+  const skills = Array.isArray(extraction.skills) ? extraction.skills : [];
+  const skillsHtml =
+    skills.length > 0
+      ? `
+        <div style="margin-top: 8px;">
+          <div style="font-size: 11px; font-weight: 800; color: #718096; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px;">Skills</div>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+            ${skills
+              .map(
+                (skill) =>
+                  `<span style="font-size: 12px; color: #1a202c; background: #edf2f7; border: 1px solid #e2e8f0; border-radius: 999px; padding: 4px 8px;">${escapeHtml(
+                    String(skill)
+                  )}</span>`
+              )
+              .join("")}
+          </div>
+        </div>
+      `
+      : "";
+
+  const rowsHtml = rows.length
+    ? `
+      <div style="display: grid; grid-template-columns: 1fr; gap: 6px; font-size: 12px; color: #2d3748;">
+        ${rows
+          .map(
+            ([label, value]) => `
+              <div style="display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid #edf2f7; padding-bottom: 4px;">
+                <span style="color: #718096;">${escapeHtml(label)}</span>
+                <span style="text-align: right; color: #1a202c;">${escapeHtml(
+                  formatDisplayValue(value)
+                )}</span>
+              </div>
+            `
+          )
+          .join("")}
+      </div>
+    `
+    : "";
+
+  return `
+    <div style="margin-bottom: 2px;">
+      <div style="font-size: 11px; font-weight: 800; color: #718096; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px;">Extracted Data</div>
+      ${rowsHtml}
+      ${skillsHtml}
+    </div>
+  `;
+}
+
+function renderBulletList(items) {
+  const list = Array.isArray(items) ? items.filter(Boolean) : [];
+
+  if (list.length === 0) {
+    return '<div style="font-size: 13px; color: #718096;">No items returned.</div>';
+  }
+
+  return `
+    <ul style="margin: 6px 0 0 0; padding-left: 20px; color: #4a5568; list-style-type: disc;">
+      ${list
+        .map(
+          (item) =>
+            `<li style="margin-bottom: 4px; line-height: 1.5;">${escapeHtml(
+              String(item)
+            )}</li>`
+        )
+        .join("")}
+    </ul>
+  `;
+}
+
+function normalizeDecision(decision) {
+  const value = String(decision || "").toLowerCase().trim();
+
+  if (value.includes("skip")) return "Skip";
+  if (value.includes("apply") && value.includes("caution")) return "Apply with Caution";
+  if (value.includes("apply")) return "Apply";
+  if (value.includes("caution")) return "Apply with Caution";
+
+  return "Apply with Caution";
+}
+
+function getDecisionColor(decision) {
+  if (decision === "Apply") return "#14a800";
+  if (decision === "Skip") return "#e53e3e";
+  return "#dd6b20";
+}
+
+function formatScore(score) {
+  if (typeof score !== "number" || Number.isNaN(score)) return "N/A";
+  return `${Math.max(0, Math.min(100, Math.round(score)))}/100`;
+}
+
+function formatConfidence(confidence) {
+  if (typeof confidence !== "number" || Number.isNaN(confidence)) return "N/A";
+  const value = confidence <= 1 ? confidence * 100 : confidence;
+  return `${Math.max(0, Math.min(100, Math.round(value)))}%`;
+}
+
+function formatDisplayValue(value) {
+  if (value === null || value === undefined || value === "") {
+    return "null";
+  }
+
+  if (typeof value === "boolean") {
+    return value ? "yes" : "no";
+  }
+
+  if (typeof value === "number") {
+    return String(value);
+  }
+
+  return String(value);
+}
+
+function hasValue(value) {
+  if (value === null || value === undefined || value === "") return false;
+  if (typeof value === "number" && Number.isNaN(value)) return false;
+  return true;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }

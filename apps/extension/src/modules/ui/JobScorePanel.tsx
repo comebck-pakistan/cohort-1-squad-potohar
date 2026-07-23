@@ -55,13 +55,20 @@ export const JobScorePanel: React.FC<Props> = ({
         <div className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
           Extracted Data
         </div>
+        <div className="text-[11px] leading-snug text-slate-500">
+          Budget amount is the numeric rate or project total when Upwork
+          exposes it explicitly. For hourly ranges, the popup stores the midpoint so the score engine has one number to compare.
+          Budget type means <span className="font-medium">hourly</span> for per-hour
+          jobs, <span className="font-medium">fixed</span> for one-off project budgets, and{" "}
+          <span className="font-medium">unknown</span> when the page does not state it clearly.
+        </div>
         <div className="grid grid-cols-2 gap-2 text-xs">
           <label className="flex flex-col gap-1 text-slate-600">
-            Budget ($)
+            Budget / rate ($)
             <input
               type="number"
               className="rounded border px-1 py-0.5"
-              value={jobData.budgetAmount || ""}
+              value={jobData.budgetAmount ?? ""}
               onChange={(e) =>
                 onJobDataChange({
                   ...jobData,
@@ -77,7 +84,7 @@ export const JobScorePanel: React.FC<Props> = ({
             <input
               type="number"
               className="rounded border px-1 py-0.5"
-              value={jobData.proposalCount || ""}
+              value={jobData.proposalCount ?? ""}
               onChange={(e) =>
                 onJobDataChange({
                   ...jobData,

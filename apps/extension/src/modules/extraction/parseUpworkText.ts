@@ -28,7 +28,7 @@ export function parsePostedAt(text: string, now = new Date()): string | null {
   }
 
   const match = text.match(
-    /posted\s+(\d+)\s+(minute|hour|day|week|month)s?\s+ago/i
+    /\b(?:posted\s+)?(\d+)\s+(minute|hour|day|week|month)s?\s+ago\b/i
   )
 
   if (!match) return null
@@ -50,39 +50,31 @@ export function parseBudget(text: string): {
   budgetAmount: number | null
   budgetType: "hourly" | "fixed" | "unknown"
 } {
-  // Relaxed hourly: look for any $amount followed by hr, hour, or hourly anywhere nearby
-  const hourlyRange = text.match(
-    /\$\s*(\d+(?:,\d+)?(?:\.\d+)?)\s*-\s*\$\s*(\d+(?:,\d+)?(?:\.\d+)?).*?(?:hr|hour|hourly)/i
-  )
+  const lines = normalizeLines(text)
+  const candidates: BudgetCandidate[] = []
 
-  if (hourlyRange) {
-    const min = parseMoney(hourlyRange[1])
-    const max = parseMoney(hourlyRange[2])
-    return {
-      budgetAmount: Math.round((min + max) / 2),
-      budgetType: "hourly"
-    }
+  for (let index = 0; index < lines.length; index++) {
+    const currentLine = lines[index]
+    const nextLine = lines[index + 1] ?? ""
+    const windowText = [currentLine, nextLine].filter(Boolean).join(" ")
+
+    const hourly = parseHourlyBudgetLine(currentLine, nextLine, windowText)
+    if (hourly) candidates.push(hourly)
+
+    const fixed = parseFixedBudgetLine(currentLine, nextLine, windowText)
+    if (fixed) candidates.push(fixed)
   }
 
-  const hourlySingle = text.match(
-    /\$\s*(\d+(?:,\d+)?(?:\.\d+)?).*?(?:hr|hour|hourly)/i
-  )
+  const bestCandidate = candidates.sort((a, b) => {
+    if (b.confidence !== a.confidence) return b.confidence - a.confidence
+    if (a.budgetType === b.budgetType) return 0
+    return a.budgetType === "fixed" ? -1 : 1
+  })[0]
 
-  if (hourlySingle) {
+  if (bestCandidate) {
     return {
-      budgetAmount: parseMoney(hourlySingle[1]),
-      budgetType: "hourly"
-    }
-  }
-
-  // Relaxed fixed price: look for the first dollar amount that appears in the text
-  // Upwork almost always lists the budget with a $ sign.
-  const fixedMatch = text.match(/\$\s*(\d+(?:,\d+)?(?:\.\d+)?)/)
-  
-  if (fixedMatch) {
-    return {
-      budgetAmount: parseMoney(fixedMatch[1]),
-      budgetType: "fixed"
+      budgetAmount: bestCandidate.budgetAmount,
+      budgetType: bestCandidate.budgetType
     }
   }
 
@@ -104,8 +96,10 @@ export function parsePaymentVerified(
 }
 
 export function parseClientRating(text: string): number | null {
-  // Matches "4.89 of 5" OR "4.89 (10 reviews)" OR "4.89 stars"
-  const match = text.match(/([1-5](?:\.\d{1,2})?)\s*(?:of\s*5|out\s*of\s*5|stars?|\(?[0-9,]+\s*reviews?\)?)/i)
+  // Matches "4.89 of 5", "4.89/5", "4.89 out of 5", or "4.89 stars"
+  const match = text.match(
+    /(?<![\d.])([0-5](?:\.\d{1,2})?)\s*(?:\/\s*5|of\s*5|out\s*of\s*5|stars?)\b/i
+  )
   if (!match) return null
 
   const rating = Number(match[1])
@@ -148,4 +142,120 @@ export function detectUnpaidTestFlag(text: string): boolean {
 
 function parseMoney(value: string): number {
   return Number(value.replace(/,/g, ""))
+}
+
+function normalizeLines(text: string): string[] {
+  return text
+    .replace(/\u00a0/g, " ")
+    .split(/\r?\n+/)
+    .map((line) => line.replace(/[ \t]+/g, " ").trim())
+    .filter(Boolean)
+}
+
+type BudgetCandidate = {
+  budgetAmount: number
+  budgetType: "hourly" | "fixed"
+  confidence: number
+}
+
+function parseHourlyBudgetLine(
+  line: string,
+  nextLine: string,
+  windowText: string
+): BudgetCandidate | null {
+  const strongMarker = /(?:\/\s*hr|\/\s*hour|per\s+hour|hourly\s+rate)/i
+  const weakMarker = /\bhourly\b/i
+  const shortLabel = line.length <= 40
+
+  if (
+    !strongMarker.test(windowText) &&
+    !(weakMarker.test(line) && shortLabel)
+  ) {
+    return null
+  }
+
+  const rangeMatch = windowText.match(
+    /(?:\$?\s*)?(\d+(?:,\d+)?(?:\.\d+)?)\s*(?:-|\u2013|\u2014|to)\s*(?:\$?\s*)?(\d+(?:,\d+)?(?:\.\d+)?)/i
+  )
+
+  if (rangeMatch) {
+    return {
+      budgetAmount: parseBudgetRangeAmount(rangeMatch[1], rangeMatch[2]),
+      budgetType: "hourly",
+      confidence: strongMarker.test(windowText) ? 100 : 80
+    }
+  }
+
+  const singleMatch = windowText.match(
+    /(?:\$?\s*)?(\d+(?:,\d+)?(?:\.\d+)?)\s*(?:\/\s*hr|\/\s*hour|per\s*hour|hourly\s+rate|hourly)/i
+  )
+
+  if (singleMatch) {
+    return {
+      budgetAmount: parseMoney(singleMatch[1]),
+      budgetType: "hourly",
+      confidence: strongMarker.test(windowText) ? 95 : 75
+    }
+  }
+
+  if (weakMarker.test(line) && shortLabel && /\$\s*\d/.test(nextLine)) {
+    const nextRange = nextLine.match(
+      /(?:\$?\s*)?(\d+(?:,\d+)?(?:\.\d+)?)\s*(?:-|\u2013|\u2014|to)\s*(?:\$?\s*)?(\d+(?:,\d+)?(?:\.\d+)?)/i
+    )
+    if (nextRange) {
+      return {
+        budgetAmount: parseBudgetRangeAmount(nextRange[1], nextRange[2]),
+        budgetType: "hourly",
+        confidence: 85
+      }
+    }
+
+    const nextSingle = nextLine.match(/\$\s*(\d+(?:,\d+)?(?:\.\d+)?)/)
+    if (nextSingle) {
+      return {
+        budgetAmount: parseMoney(nextSingle[1]),
+        budgetType: "hourly",
+        confidence: 80
+      }
+    }
+  }
+
+  return null
+}
+
+function parseFixedBudgetLine(
+  line: string,
+  nextLine: string,
+  windowText: string
+): BudgetCandidate | null {
+  const strongMarker = /\b(?:fixed[\s-]*price|est\.?\s*budget|project budget)\b/i
+  const weakMarker = /\bbudget\b/i
+  const shortLabel = line.length <= 40
+
+  if (
+    !strongMarker.test(windowText) &&
+    !(weakMarker.test(line) && shortLabel)
+  ) {
+    return null
+  }
+
+  if (/(?:\/\s*hr|\/\s*hour|per\s+hour|hourly\s+rate)/i.test(windowText)) {
+    return null
+  }
+
+  const amountMatch =
+    line.match(/\$\s*(\d+(?:,\d+)?(?:\.\d+)?)/) ??
+    nextLine.match(/\$\s*(\d+(?:,\d+)?(?:\.\d+)?)/)
+
+  if (!amountMatch) return null
+
+  return {
+    budgetAmount: parseMoney(amountMatch[1]),
+    budgetType: "fixed",
+    confidence: strongMarker.test(windowText) ? 100 : 75
+  }
+}
+
+function parseBudgetRangeAmount(min: string, max: string): number {
+  return Math.round((parseMoney(min) + parseMoney(max)) / 2)
 }

@@ -49,6 +49,8 @@ export default function UpworkJobOverlay() {
   const [loadingAction, setLoadingAction] = useState<AiAction | null>(null)
   const [aiResult, setAiResult] = useState<AiActionResult | null>(null)
   const [aiError, setAiError] = useState<string | null>(null)
+  const lastExtractionSignatureRef = React.useRef("")
+  const lastSyncedUrlRef = React.useRef("")
 
   useEffect(() => {
     getProfile().then((storedProfile) => {
@@ -58,81 +60,73 @@ export default function UpworkJobOverlay() {
   }, [])
 
   useEffect(() => {
-    const checkCurrentPage = () => {
+    const syncCurrentPage = () => {
       const currentUrl = window.location.href
-      const isJob =
-        currentUrl.includes("~") || currentUrl.includes("/jobs/")
+      const nextIsJob = hasActiveJobDetail(currentUrl)
 
-      if (isJob === isJobPage && currentUrl === url) return
-
-      setIsJobPage(isJob)
-      setUrl(currentUrl)
-      setAiError(null)
-      setAiResult(null)
-
-      if (!isJob) {
-        setJobData(null)
-        setDecision(null)
-        return
+      if (currentUrl !== lastSyncedUrlRef.current) {
+        setAiError(null)
+        setAiResult(null)
+        lastSyncedUrlRef.current = currentUrl
       }
 
-      if (!profile) return
+      setIsJobPage(nextIsJob)
+      setUrl(currentUrl)
 
-      // Use a polling mechanism to handle slow-loading sliders in Upwork's SPA
-      let attempts = 0
-      const extractInterval = window.setInterval(() => {
-        attempts++
-
-        const getActiveJobText = () => {
-          // Priority 1: Job slider (Upwork search page)
-          const slider = document.querySelector('.up-slider, .air3-slider, [data-test="job-details-slider"], [role="dialog"]')
-          if (slider) {
-            return (slider as HTMLElement).innerText || ""
-          }
-          // Priority 2: Main container (Dedicated job page)
-          const main = document.querySelector('main')
-          if (main) {
-            return (main as HTMLElement).innerText || ""
-          }
-          // Priority 3: Fallback
-          return document.body.innerText
-        }
-
-        const pageText = getActiveJobText()
-        
-        // Wait until the text is reasonably long (meaning the skeleton loaders are gone)
-        // or if we've tried for 5 seconds (10 attempts * 500ms)
-        const isLoaded = pageText.length > 300 || attempts >= 10
-
-        if (isLoaded) {
-          window.clearInterval(extractInterval)
-          const extracted = extractJobData(pageText)
-          const nextDecision = calculateScore(extracted, profile)
-
-          setJobData(extracted)
-          setDecision(nextDecision)
-          logScoreEvent(nextDecision, extracted)
-        }
-      }, 500)
+      if (!nextIsJob) {
+        setJobData(null)
+        setDecision(null)
+        lastExtractionSignatureRef.current = ""
+        return
+      }
     }
 
-    checkCurrentPage()
+    syncCurrentPage()
 
-    const clickListener = () => window.setTimeout(checkCurrentPage, 50)
+    const clickListener = () => window.setTimeout(syncCurrentPage, 50)
+    const interval = window.setInterval(syncCurrentPage, 1000)
     document.addEventListener("click", clickListener)
-    const interval = window.setInterval(checkCurrentPage, 1000)
 
     return () => {
       window.clearInterval(interval)
       document.removeEventListener("click", clickListener)
     }
-  }, [isJobPage, profile, url])
+  }, [])
 
   useEffect(() => {
-    if (jobData && profile) {
-      setDecision(calculateScore(jobData, profile))
+    if (!isJobPage || !profile) return
+
+    let cancelled = false
+
+    const extractCurrentJob = () => {
+      if (cancelled) return
+
+      const pageText = normalizeJobText(getActiveJobText(url))
+      if (!pageText) return
+
+      const signature = `${url}::${pageText}`
+      if (signature === lastExtractionSignatureRef.current) return
+
+      lastExtractionSignatureRef.current = signature
+
+      const extracted = extractJobData(pageText)
+      const nextDecision = calculateScore(extracted, profile)
+
+      console.log("[Upwork raw extracted job data]", extracted)
+
+      setJobData(extracted)
+      setDecision(nextDecision)
+      logScoreEvent(nextDecision, extracted)
     }
-  }, [jobData, profile])
+
+    extractCurrentJob()
+    const interval = window.setInterval(extractCurrentJob, 750)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(interval)
+    }
+  }, [isJobPage, profile, url])
 
   if (!isJobPage) return null
 
@@ -141,8 +135,9 @@ export default function UpworkJobOverlay() {
     setProfile(newProfile)
     setEditingProfile(false)
 
-    if (url) {
-      const extracted = extractJobData(document.body.innerText)
+    if (isJobPage) {
+      const extracted = extractJobData(normalizeJobText(getActiveJobText(url)))
+      console.log("[Upwork raw extracted job data]", extracted)
       setJobData(extracted)
     }
   }
@@ -205,6 +200,100 @@ export default function UpworkJobOverlay() {
       )}
     </FloatingOverlay>
   )
+}
+
+function getActiveJobText(currentUrl: string): string {
+  const selectors = [
+    ".up-slider",
+    ".air3-slider",
+    '[data-test="job-details-slider"]',
+    '[data-test="job-description"]',
+    '[data-test="job-details"]'
+  ]
+
+  for (const selector of selectors) {
+    const element = document.querySelector(selector)
+    if (element instanceof HTMLElement && isVisibleElement(element)) {
+      const text = element.innerText?.trim()
+      if (text && isTrustedJobText(text, selector, currentUrl)) return text
+    }
+  }
+
+  if (isLikelyDedicatedJobRoute(currentUrl)) {
+    const main = document.querySelector("main")
+    if (main instanceof HTMLElement && isVisibleElement(main)) {
+      const text = main.innerText?.trim()
+      if (text && isTrustedJobText(text, "main", currentUrl)) return text
+    }
+  }
+
+  return ""
+}
+
+function normalizeJobText(text: string): string {
+  return text.replace(/\u00a0/g, " ").replace(/[ \t]+/g, " ").trim()
+}
+
+function isVisibleElement(element: HTMLElement): boolean {
+  const style = window.getComputedStyle(element)
+  return (
+    style.display !== "none" &&
+    style.visibility !== "hidden" &&
+    style.opacity !== "0" &&
+    element.getClientRects().length > 0
+  )
+}
+
+function isLikelyDedicatedJobRoute(currentUrl: string): boolean {
+  try {
+    const { pathname } = new URL(currentUrl)
+    return pathname.includes("/~")
+  } catch {
+    return false
+  }
+}
+
+function hasActiveJobDetail(currentUrl: string): boolean {
+  return Boolean(getActiveJobText(currentUrl))
+}
+
+function isTrustedJobText(
+  text: string,
+  selector: string,
+  currentUrl: string
+): boolean {
+  const normalized = normalizeJobText(text).toLowerCase()
+  const hasPricingSignal = [
+    /\b(?:fixed[\s-]*price|hourly|per\s+hour|\/\s*hr|\/\s*hour)\b/i,
+    /\bbudget\b/i
+  ].some((regex) => regex.test(normalized))
+  const hasCompetitionSignal = [/\bproposals?\b/i].some((regex) =>
+    regex.test(normalized)
+  )
+  const hasClientSignal = [
+    /\bpayment(?:\s+method)?\s+(?:verified|unverified|not\s+verified)\b/i,
+    /\bclient(?:'s)?\s+recent\s+history\b/i,
+    /\btotal\s+spent\b/i,
+    /\bhires?\b/i,
+    /\breviews?\b/i,
+    /\brating\b/i
+  ]
+
+  const signalHits = [
+    hasPricingSignal ? 1 : 0,
+    hasCompetitionSignal ? 1 : 0,
+    hasClientSignal ? 1 : 0
+  ].reduce((sum, hit) => sum + hit, 0)
+
+  if (selector !== "main") {
+    return signalHits >= 2 && hasClientSignal && normalized.length >= 120
+  }
+
+  if (selector === "main" && isLikelyDedicatedJobRoute(currentUrl)) {
+    return signalHits >= 2 && normalized.length >= 180
+  }
+
+  return false
 }
 
 function logScoreEvent(
