@@ -1,15 +1,47 @@
 console.log("Connects Optimizer: staged pipeline overlay loaded");
 
 let lastProcessedUrl = "";
+let profile = null;
+let profileLoadStarted = false;
+let profileFormVisible = false;
+let syncTimer = null;
+let analysisGeneration = 0;
+let observedUrl = "";
+
+function isSupportedUpworkRoute() {
+  const path = window.location.pathname;
+  return (
+    /\/jobs(?:\/|$)/.test(path) ||
+    /\/find-work(?:\/|$)/.test(path) ||
+    /\/search\/jobs(?:\/|$)/.test(path)
+  );
+}
+
+function hasSelectedJobDetail() {
+  const path = window.location.pathname;
+  if (/\/jobs\/~[A-Za-z0-9]+/i.test(path)) return true;
+
+  // Find Work is an SPA route.  A selected job uses a detail panel rather
+  // than a separate /jobs/~ URL, so rely on several stable, human-visible
+  // labels instead of any one client statistic.
+  const text = (document.body?.innerText || "").toLowerCase();
+  const detailSignals = [
+    "about the client",
+    "client's recent history",
+    "activity on this job",
+    "connects required",
+    "submit a proposal"
+  ];
+  return detailSignals.filter((signal) => text.includes(signal)).length >= 2;
+}
 
 function checkAndCleanUp() {
-  const currentUrl = window.location.href;
-  const isJobPage = currentUrl.includes("~") || currentUrl.includes("/jobs/");
-
-  if (!isJobPage) {
-    if (lastProcessedUrl !== "") {
+  if (!isSupportedUpworkRoute()) {
+    if (lastProcessedUrl !== "" || document.getElementById("connects-optimizer-widget")) {
       removeWidget();
       lastProcessedUrl = "";
+      profileFormVisible = false;
+      analysisGeneration += 1;
     }
     return true;
   }
@@ -17,65 +49,186 @@ function checkAndCleanUp() {
   return false;
 }
 
-document.addEventListener("click", () => {
-  setTimeout(checkAndCleanUp, 50);
-});
+function schedulePageSync(delay = 900) {
+  window.clearTimeout(syncTimer);
+  syncTimer = window.setTimeout(syncCurrentPage, delay);
+}
 
-setInterval(() => {
+function syncCurrentPage() {
   if (checkAndCleanUp()) return;
 
+  if (!profileLoadStarted) {
+    profileLoadStarted = true;
+    chrome.storage.local.get(["freelancerProfile"], (stored) => {
+      profile = stored?.freelancerProfile || null;
+      if (!isSupportedUpworkRoute()) return;
+
+      if (!profile) {
+        profileFormVisible = true;
+        renderProfileSetup();
+        return;
+      }
+
+      profileFormVisible = false;
+      renderReadyState();
+    });
+    return;
+  }
+
+  if (!profile || profileFormVisible) return;
+  renderReadyState();
+}
+
+function observeUpworkNavigation() {
+  const observer = new MutationObserver(() => {
+    const currentUrl = window.location.href;
+    if (currentUrl !== observedUrl) {
+      observedUrl = currentUrl;
+      schedulePageSync(1200);
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+  window.addEventListener("popstate", () => schedulePageSync(1200));
+  window.addEventListener("hashchange", () => schedulePageSync(1200));
+  observedUrl = window.location.href;
+  schedulePageSync(1200);
+}
+
+observeUpworkNavigation();
+
+function analyzeCurrentJob() {
   const currentUrl = window.location.href;
-  const isJobPage = currentUrl.includes("~") || currentUrl.includes("/jobs/");
+  if (!profile) return;
+
   const pageText = document.body.innerText || "";
+  if (pageText.trim().length < 250) {
+    renderUIOverlay({
+      status: "waiting",
+      message: "The job details are still loading. Please wait a moment and try again."
+    });
+    return;
+  }
 
-  if (isJobPage && currentUrl !== lastProcessedUrl) {
-    if (pageText.includes("hire rate") && pageText.includes("spent")) {
-      lastProcessedUrl = currentUrl;
+  lastProcessedUrl = currentUrl;
+  const requestGeneration = ++analysisGeneration;
+  removeWidget();
+  renderUIOverlay({
+    status: "loading",
+    message: "Stage 1/3: extracting job details from the page text..."
+  });
 
-      removeWidget();
-      renderUIOverlay({
-        status: "loading",
-        message: "Stage 1/3: extracting job details from the page text..."
-      });
+  try {
+    chrome.runtime.sendMessage(
+      { type: "ANALYZE_FULL_JOB", payload: pageText, profile },
+      (response) => {
+        if (requestGeneration !== analysisGeneration || currentUrl !== window.location.href) {
+          return;
+        }
 
-      try {
-        chrome.runtime.sendMessage(
-          {
-            type: "ANALYZE_FULL_JOB",
-            payload: pageText
-          },
-          (response) => {
-            if (chrome.runtime.lastError) {
-              renderUIOverlay({
-                status: "error",
-                message: "Connection lost. Refresh the page and try again."
-              });
-              return;
-            }
+        if (chrome.runtime.lastError) {
+          renderUIOverlay({
+            status: "error",
+            message: "Connection lost. Refresh the page and try again."
+          });
+          return;
+        }
 
-            if (response && response.success) {
-              displayFinalEvaluation(response.data);
-              return;
-            }
+        if (response && response.success) {
+          displayFinalEvaluation(response.data);
+          return;
+        }
 
-            renderUIOverlay({
-              status: "error",
-              message: `Analysis failed: ${response?.error || "Unknown error occurred."}`
-            });
-          }
-        );
-      } catch (error) {
         renderUIOverlay({
           status: "error",
-          message:
-            error instanceof Error
-              ? error.message
-              : "Extension context invalidated. Refresh the tab and try again."
+          message: `Analysis failed: ${response?.error || "Unknown error occurred."}`
         });
       }
-    }
+    );
+  } catch (error) {
+    renderUIOverlay({
+      status: "error",
+      message:
+        error instanceof Error
+          ? error.message
+          : "Extension context invalidated. Refresh the tab and try again."
+    });
   }
-}, 1000);
+}
+
+function renderReadyState() {
+  if (!profile || profileFormVisible || !isSupportedUpworkRoute()) return;
+
+  renderUIOverlay({
+    status: "ready",
+    message: hasSelectedJobDetail()
+      ? "Ready to analyze the selected job."
+      : "Open a job, then analyze the page currently shown."
+  });
+}
+
+function renderProfileSetup() {
+  injectScrollbarCSS();
+  removeWidget();
+
+  const widget = document.createElement("div");
+  widget.id = "connects-optimizer-widget";
+  widget.style.cssText =
+    "position: fixed; bottom: 30px; right: 30px; z-index: 999999; padding: 20px; background: #ffffff; border-radius: 14px; box-shadow: 0 12px 35px rgba(0,0,0,0.15); width: 360px; max-height: 85vh; overflow-y: auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; border-left: 6px solid #3182ce;";
+  widget.innerHTML = `
+    <div style="font-weight: bold; font-size: 15px; color: #1a202c; margin-bottom: 6px;">Set up your freelancer profile</div>
+    <div style="font-size: 12px; color: #718096; line-height: 1.5; margin-bottom: 14px;">Saved once in this browser and used to personalize job scores and proposals.</div>
+    <form id="connects-profile-form">
+      ${profileInput("profile-name", "Name", "e.g. Ayesha Khan", true)}
+      ${profileInput("profile-experience", "Experience level", "e.g. Intermediate, 4 years", true)}
+      ${profileInput("profile-skills", "Skills", "e.g. React, Python, UI/UX", true)}
+      ${profileInput("profile-portfolio", "Portfolio (optional)", "URL(s), separated by commas", false)}
+      <label style="display:block; font-size:12px; color:#4a5568; margin: 10px 0 4px;">Bio (optional)</label>
+      <textarea id="profile-bio" rows="3" placeholder="Short professional summary" style="box-sizing:border-box; width:100%; resize:vertical; border:1px solid #cbd5e0; border-radius:6px; padding:8px; font:inherit; font-size:12px;"></textarea>
+      <div id="profile-error" style="display:none; color:#c53030; font-size:12px; margin:8px 0;"></div>
+      <button type="submit" style="width:100%; border:0; border-radius:7px; padding:10px; color:#fff; background:#3182ce; font-weight:700; cursor:pointer;">Save profile</button>
+    </form>
+  `;
+  document.body.appendChild(widget);
+
+  document.getElementById("connects-profile-form")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const nextProfile = {
+      name: document.getElementById("profile-name").value.trim(),
+      experienceLevel: document.getElementById("profile-experience").value.trim(),
+      skills: document
+        .getElementById("profile-skills")
+        .value.split(",").map((skill) => skill.trim()).filter(Boolean),
+      portfolio: document
+        .getElementById("profile-portfolio")
+        .value.split(",").map((url) => url.trim()).filter(Boolean),
+      bio: document.getElementById("profile-bio").value.trim()
+    };
+
+    const error = document.getElementById("profile-error");
+    if (!nextProfile.name || !nextProfile.experienceLevel || nextProfile.skills.length === 0) {
+      error.textContent = "Name, experience level, and at least one skill are required.";
+      error.style.display = "block";
+      return;
+    }
+
+    chrome.runtime.sendMessage({ type: "SAVE_PROFILE", profile: nextProfile }, (response) => {
+      if (chrome.runtime.lastError || !response?.success) {
+        error.textContent = response?.error || "Could not save profile. Refresh and try again.";
+        error.style.display = "block";
+        return;
+      }
+
+      profile = nextProfile;
+      profileFormVisible = false;
+      lastProcessedUrl = "";
+      renderReadyState();
+    });
+  });
+}
+
+function profileInput(id, label, placeholder, required) {
+  return `<label style="display:block; font-size:12px; color:#4a5568; margin: 10px 0 4px;">${label}${required ? " *" : ""}</label><input id="${id}" ${required ? "required" : ""} placeholder="${placeholder}" style="box-sizing:border-box; width:100%; border:1px solid #cbd5e0; border-radius:6px; padding:8px; font:inherit; font-size:12px;" />`;
+}
 
 function removeWidget() {
   const widget = document.getElementById("connects-optimizer-widget");
@@ -118,6 +271,28 @@ function renderUIOverlay(uiState) {
       </div>
       <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
     `;
+    return;
+  }
+
+  if (uiState.status === "ready" || uiState.status === "waiting") {
+    const ready = uiState.status === "ready";
+    widget.style.borderLeftColor = ready ? "#14a800" : "#dd6b20";
+    widget.innerHTML = `
+      <div style="font-weight: bold; font-size: 15px; margin-bottom: 6px; color: #1a202c; display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+        <span>Connects Budget Optimizer</span>
+        <button id="connects-optimizer-close" type="button" aria-label="Close" style="border:0; background:transparent; cursor:pointer; color:#a0aec0; font-size:18px; line-height:1;">&times;</button>
+      </div>
+      <div style="font-size: 13px; color: #4a5568; line-height: 1.5; margin-bottom: 12px;">${escapeHtml(
+        uiState.message
+      )}</div>
+      <button id="connects-optimizer-analyze" type="button" style="width:100%; border:0; border-radius:7px; padding:10px; color:#fff; background:#14a800; font-weight:700; cursor:pointer;">Analyze this job</button>
+      <div style="font-size:11px; color:#718096; line-height:1.45; margin-top:10px;">The extension reads the page and contacts Gemini only after you select this button.</div>
+    `;
+
+    document.getElementById("connects-optimizer-close")?.addEventListener("click", removeWidget);
+    document
+      .getElementById("connects-optimizer-analyze")
+      ?.addEventListener("click", analyzeCurrentJob);
     return;
   }
 
@@ -189,6 +364,7 @@ function displayFinalEvaluation(result) {
     <div style="margin-bottom: 14px;">
       <div style="font-size: 11px; font-weight: 800; color: #718096; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px;">Evaluation</div>
       <div style="font-size: 13px; color: #2d3748; line-height: 1.5;">
+        <div style="font-size: 11px; color: #3182ce; margin-bottom: 6px;">Personalized using your saved freelancer profile</div>
         <strong style="color: #1a202c;">Score ${escapeHtml(formatScore(evaluation.score))}</strong>
         <span style="color: #718096;"> | Confidence ${escapeHtml(
           formatConfidence(evaluation.confidence)

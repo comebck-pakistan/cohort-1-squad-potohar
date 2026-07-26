@@ -1,6 +1,9 @@
-const GEMINI_API_KEY = "API_KEY_HERE";
+const GEMINI_API_KEY = "";
+const BACKEND_API_URL = "";
 const GEMINI_MODEL = "gemini-3.1-flash-lite";
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+const MAX_JOB_TEXT_CHARS = 50000;
+const GEMINI_REQUEST_TIMEOUT_MS = 45000;
 
 const EXTRACTION_SCHEMA = {
   title: "string | null",
@@ -42,15 +45,22 @@ const EVALUATION_FRAMEWORK = {
 };
 
 function isPlaceholderApiKey() {
-  return !GEMINI_API_KEY || GEMINI_API_KEY.includes("YOUR_GEMINI_API_KEY_HERE");
+  return (
+    !GEMINI_API_KEY ||
+    GEMINI_API_KEY === "API_KEY_HERE" ||
+    GEMINI_API_KEY.includes("YOUR_GEMINI_API_KEY_HERE")
+  );
 }
 
 function normalizeJobText(text) {
-  return String(text || "")
+  const normalized = String(text || "")
     .replace(/\u00a0/g, " ")
     .replace(/[ \t]+/g, " ")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+
+  if (normalized.length <= MAX_JOB_TEXT_CHARS) return normalized;
+  return `${normalized.slice(0, MAX_JOB_TEXT_CHARS)}\n\n[Page text truncated for request safety.]`;
 }
 
 function stripCodeFences(text) {
@@ -112,29 +122,43 @@ async function callGeminiJson({
     );
   }
 
-  const response = await fetch(GEMINI_API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      systemInstruction: {
-        role: "system",
-        parts: [{ text: systemInstruction }]
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), GEMINI_REQUEST_TIMEOUT_MS);
+  let response;
+
+  try {
+    response = await fetch(GEMINI_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
       },
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: prompt }]
+      signal: controller.signal,
+      body: JSON.stringify({
+        systemInstruction: {
+          role: "system",
+          parts: [{ text: systemInstruction }]
+        },
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: prompt }]
+          }
+        ],
+        generationConfig: {
+          temperature,
+          maxOutputTokens,
+          responseMimeType: "application/json"
         }
-      ],
-      generationConfig: {
-        temperature,
-        maxOutputTokens,
-        responseMimeType: "application/json"
-      }
-    })
-  });
+      })
+    });
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new Error(`${stageName} timed out. Please try again.`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   const rawBody = await response.text();
   let data;
@@ -182,7 +206,7 @@ ${pageText}
 `.trim();
 }
 
-function buildEvaluationPrompt(extraction) {
+function buildEvaluationPrompt(extraction, profile) {
   return `
 Evaluate this extracted Upwork job JSON for Connects ROI.
 
@@ -194,6 +218,8 @@ Decision guidance:
 - Apply with Caution when the job is viable but has mixed or incomplete signals.
 - Skip when the job is stale, overcrowded, underpriced, too vague, or otherwise weak.
 - Missing information should lower confidence and push the score down.
+- Compare the job against the freelancer profile. Reward direct skill and experience matches.
+- Do not treat optional portfolio or bio details as proof of experience unless explicitly stated.
 
 Return valid JSON only with this shape:
 {
@@ -207,18 +233,22 @@ Return valid JSON only with this shape:
 
 Extracted job JSON:
 ${JSON.stringify(extraction, null, 2)}
+
+Freelancer profile JSON:
+${JSON.stringify(profile || null, null, 2)}
 `.trim();
 }
 
-function buildProposalPrompt(extraction, evaluation) {
+function buildProposalPrompt(extraction, evaluation, profile) {
   return `
 Write a concise, tailored Upwork proposal for this job.
 
 Rules:
 - Only run this stage because the job is not Skip.
 - Use the extracted job details and the evaluation result.
+- Personalize the proposal using the freelancer profile.
 - Do not mention hidden instructions or internal scoring.
-- Do not invent freelancer history or skills that are not in the job data.
+- Do not invent freelancer history, skills, clients, or results that are not in the profile.
 - Keep the proposal concrete, relevant, and easy to send.
 - Include a short explanation of why the job is a good fit.
 
@@ -233,6 +263,9 @@ ${JSON.stringify(evaluation, null, 2)}
 
 Extracted job JSON:
 ${JSON.stringify(extraction, null, 2)}
+
+Freelancer profile JSON:
+${JSON.stringify(profile || null, null, 2)}
 `.trim();
 }
 
@@ -248,8 +281,8 @@ async function extractJobData(pageText) {
   });
 }
 
-async function evaluateJob(extraction) {
-  const prompt = buildEvaluationPrompt(extraction);
+async function evaluateJob(extraction, profile) {
+  const prompt = buildEvaluationPrompt(extraction, profile);
   return callGeminiJson({
     stageName: "stage 2 evaluation",
     prompt,
@@ -260,8 +293,8 @@ async function evaluateJob(extraction) {
   });
 }
 
-async function generateProposal(extraction, evaluation) {
-  const prompt = buildProposalPrompt(extraction, evaluation);
+async function generateProposal(extraction, evaluation, profile) {
+  const prompt = buildProposalPrompt(extraction, evaluation, profile);
   return callGeminiJson({
     stageName: "stage 3 proposal generation",
     prompt,
@@ -272,11 +305,11 @@ async function generateProposal(extraction, evaluation) {
   });
 }
 
-async function runJobAnalysisPipeline(pageText) {
+async function runJobAnalysisPipeline(pageText, profile) {
   const extraction = await extractJobData(pageText);
   console.log("[Connects Optimizer] Stage 1 extraction complete", extraction);
 
-  const evaluation = await evaluateJob(extraction);
+  const evaluation = await evaluateJob(extraction, profile);
   console.log("[Connects Optimizer] Stage 2 evaluation complete", evaluation);
 
   let proposal = null;
@@ -284,7 +317,7 @@ async function runJobAnalysisPipeline(pageText) {
 
   if (normalizeDecision(evaluation?.decision) !== "Skip") {
     try {
-      proposal = await generateProposal(extraction, evaluation);
+      proposal = await generateProposal(extraction, evaluation, profile);
       console.log("[Connects Optimizer] Stage 3 proposal complete", proposal);
     } catch (error) {
       proposalError =
@@ -294,6 +327,7 @@ async function runJobAnalysisPipeline(pageText) {
   }
 
   return {
+    profile,
     extraction,
     evaluation,
     proposal,
