@@ -6,8 +6,20 @@
   "permissions": ["storage"],
   "host_permissions": [
     "https://*.upwork.com/*",
-    "http://localhost:8000/*"
+    "https://uptally-server.onrender.com/*"
   ],
+  "icons": {
+    "16": "icon/icon16.png",
+    "48": "icon/icon48.png",
+    "128": "icon/icon128.png"
+  },
+  "action": {
+    "default_icon": {
+      "16": "icon/icon16.png",
+      "48": "icon/icon48.png",
+      "128": "icon/icon128.png"
+    }
+  },
   "background": {
     "service_worker": "background.js"
   },
