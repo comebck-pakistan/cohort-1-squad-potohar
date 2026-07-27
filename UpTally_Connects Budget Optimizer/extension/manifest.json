@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "UpTally - Connects Budget Optimizer",
+  "version": "1.0.0",
+  "description": "Qualify Upwork job viability and save money before spending connects.",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://*.upwork.com/*",
+    "http://localhost:8000/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.upwork.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
