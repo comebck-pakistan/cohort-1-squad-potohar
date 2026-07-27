@@ -44,7 +44,7 @@ if (request?.type === "SAVE_PROFILE") {
           throw new Error("The selected job did not contain enough readable detail. Wait for it to load and try again.");
         }
 
-        const response = await fetch("http://localhost:8000/api/analyze", {
+        const response = await fetch("https://uptally-server.onrender.com/api/analyze", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ pageText, profile })

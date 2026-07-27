@@ -6,7 +6,7 @@
   "permissions": ["storage"],
   "host_permissions": [
     "https://*.upwork.com/*",
-    "http://localhost:8000/*"
+    "https://uptally-server.onrender.com/*"
   ],
   "background": {
     "service_worker": "background.js"
