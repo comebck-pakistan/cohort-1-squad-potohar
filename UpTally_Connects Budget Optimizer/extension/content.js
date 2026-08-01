@@ -474,15 +474,15 @@ function displayFinalEvaluation(result) {
       </div>
     </div>
 
-    <div style="margin-bottom: 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px;">
+<div style="margin-bottom: 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px;">
       <div style="display: flex; align-items: center; gap: 14px;">
         ${circularScoreRing}
-        <div style="display: flex; flex-direction: column; gap: 4px;">
-          <div style="font-size: 13px; font-weight: 700; color: #1a202c;">
-            Score: <span style="color: ${badgeColor};">${escapeHtml(formatScore(evaluation.score))}</span>
+        <div style="display: flex; flex-direction: column; justify-content: center; gap: 4px;">
+          <div style="font-size: 13px; font-weight: 800; color: #1a202c;">
+            Job Viability Score
           </div>
           <div style="font-size: 12px; color: #4a5568;">
-            Confidence: <span style="background: #edf2f7; border: 1px solid #e2e8f0; padding: 2px 7px; border-radius: 12px; font-weight: 700; color: #2d3748; font-size: 11px;">${escapeHtml(formatConfidence(evaluation.confidence))}</span>
+            Score: <span style="color: ${badgeColor}; font-weight: 700;">${escapeHtml(formatScore(evaluation.score))}</span>
           </div>
         </div>
       </div>

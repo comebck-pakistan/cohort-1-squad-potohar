@@ -41,10 +41,11 @@ EVALUATION_FRAMEWORK = {
     "skip": "0-49"
   },
   "rules": [
-    "PRIMARY FOCUS: The freelancer's skill and experience alignment is the most important metric (35% of the score).",
+      "PRIMARY FOCUS: The freelancer's skill and experience alignment is the most important metric (35% of the score).",
     "SKILL FORGIVENESS: If the freelancer possesses a strong majority of the required skills (e.g., 8 out of 10), score this highly. Do not severely penalize the score for 1 or 2 missing minor skills.",
     "APPLY BAND ENCOURAGEMENT: If the job has a verified client, a realistic budget, and is a strong match for the freelancer, confidently award a score in the 80s or 90s (Apply).",
     "Return 'Apply with Caution' if the job is viable but has mixed signals (e.g., a perfect skill match but unverified payment, or a great client but high competition).",
-    "Return 'Skip' ONLY when the job is clearly a scam, severely lowballing, heavily overcrowded, or the freelancer has zero relevant skills."
+    "Return 'Skip' ONLY when the job is clearly a scam, severely lowballing, heavily overcrowded, or the freelancer has zero relevant skills.",
+    "SCORING VARIANCE (CRITICAL): Never output flat, default, or repeated scores like 30, 35, 65, or 70. You MUST calculate highly granular, unique scores (e.g., 28, 34, 62, 67, 71, 84) by factoring in micro-signals like the exact minutes since posted, exact proposal count, and client tone."
   ]
 }

@@ -45,7 +45,7 @@ async def run_job_analysis_pipeline(payload: AnalyzePayload):
             stage_name="stage 2 evaluation",
             system_instruction="You are stage 2 of a three-stage Upwork analysis pipeline. Evaluate the extracted job JSON and output strict JSON.",
             prompt=evaluation_prompt,
-            temperature=0.2,
+            temperature=0.5,
             max_tokens=900
         )
 
