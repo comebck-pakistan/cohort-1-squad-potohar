@@ -70,3 +70,13 @@ if (request?.type === "SAVE_PROFILE") {
 
   return false;
 });
+
+// --- NEW FEATURE: Listen for Extension Icon Clicks ---
+chrome.action.onClicked.addListener((tab) => {
+  // Only trigger the popup if the user is actively on an Upwork page
+  if (tab.url && tab.url.includes(".upwork.com")) {
+    chrome.tabs.sendMessage(tab.id, { type: "TOGGLE_PROFILE_FORM" }).catch(() => {
+      // Ignore errors if the page hasn't fully loaded the content script yet
+    });
+  }
+});

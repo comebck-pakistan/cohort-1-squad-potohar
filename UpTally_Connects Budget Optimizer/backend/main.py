@@ -18,7 +18,7 @@ async def health_check():
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"chrome-extension://.*",
+    allow_origin_regex=r"chrome-extension://hbiacnmbakabgindndoepmmenajbddao",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

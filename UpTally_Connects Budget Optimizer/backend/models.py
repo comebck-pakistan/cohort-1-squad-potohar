@@ -26,23 +26,25 @@ EXTRACTION_SCHEMA = {
   }
 }
 
+# --- REBALANCED EVALUATION FRAMEWORK ---
 EVALUATION_FRAMEWORK = {
   "weights": {
-    "freshness": 30,
-    "competition": 25,
-    "clientQuality": 25,
-    "budgetRealism": 10,
-    "scopeClarity": 10
+    "freelancerAlignment": 35,
+    "clientQuality": 20,
+    "competition": 20,
+    "freshness": 15,
+    "budgetRealism": 10
   },
   "decisionBands": {
-    "apply": "80-100",
-    "caution": "50-79",
+    "apply": "75-100",
+    "caution": "50-74",
     "skip": "0-49"
   },
   "rules": [
-    "Use missing information conservatively instead of guessing.",
-    "A job with weak competition signals or stale timing should lose score quickly.",
-    "A job with strong client quality but poor budget or heavy competition should usually be Apply with Caution, not Apply.",
-    "Return Skip when the job is not worth spending Connects on."
+    "PRIMARY FOCUS: The freelancer's skill and experience alignment is the most important metric (35% of the score).",
+    "SKILL FORGIVENESS: If the freelancer possesses a strong majority of the required skills (e.g., 8 out of 10), score this highly. Do not severely penalize the score for 1 or 2 missing minor skills.",
+    "APPLY BAND ENCOURAGEMENT: If the job has a verified client, a realistic budget, and is a strong match for the freelancer, confidently award a score in the 80s or 90s (Apply).",
+    "Return 'Apply with Caution' if the job is viable but has mixed signals (e.g., a perfect skill match but unverified payment, or a great client but high competition).",
+    "Return 'Skip' ONLY when the job is clearly a scam, severely lowballing, heavily overcrowded, or the freelancer has zero relevant skills."
   ]
 }

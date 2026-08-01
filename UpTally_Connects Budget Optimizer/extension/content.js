@@ -8,6 +8,22 @@ let syncTimer = null;
 let analysisGeneration = 0;
 let observedUrl = "";
 
+// --- NEW FEATURE: Listen for Toolbar Icon Click ---
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.type === "TOGGLE_PROFILE_FORM") {
+    if (profileFormVisible) {
+      profileFormVisible = false;
+      removeWidget();
+      renderReadyState();
+    } else {
+      profileFormVisible = true;
+      renderProfileSetup();
+    }
+    sendResponse({ success: true });
+  }
+});
+// --------------------------------------------------
+
 function isSupportedUpworkRoute() {
   const path = window.location.pathname;
   return (
@@ -17,22 +33,10 @@ function isSupportedUpworkRoute() {
   );
 }
 
+// --- UPDATED LOGIC: The URL Slug Gatekeeper ---
 function hasSelectedJobDetail() {
-  const path = window.location.pathname;
-  if (/\/jobs\/~[A-Za-z0-9]+/i.test(path)) return true;
-
-  // Find Work is an SPA route.  A selected job uses a detail panel rather
-  // than a separate /jobs/~ URL, so rely on several stable, human-visible
-  // labels instead of any one client statistic.
-  const text = (document.body?.innerText || "").toLowerCase();
-  const detailSignals = [
-    "about the client",
-    "client's recent history",
-    "activity on this job",
-    "connects required",
-    "submit a proposal",
-  ];
-  return detailSignals.filter((signal) => text.includes(signal)).length >= 2;
+  const url = window.location.href;
+  return url.includes("~");
 }
 
 function checkAndCleanUp() {
@@ -48,7 +52,6 @@ function checkAndCleanUp() {
     }
     return true;
   }
-
   return false;
 }
 
@@ -62,19 +65,31 @@ function syncCurrentPage() {
 
   if (!profileLoadStarted) {
     profileLoadStarted = true;
-    chrome.storage.local.get(["freelancerProfile"], (stored) => {
-      profile = stored?.freelancerProfile || null;
-      if (!isSupportedUpworkRoute()) return;
+    
+    if (typeof chrome === "undefined" || !chrome.runtime?.id || !chrome.storage?.local) {
+      console.warn("UpTally: Extension context invalidated. Please refresh the Upwork tab.");
+      return;
+    }
 
-      if (!profile) {
-        profileFormVisible = true;
-        renderProfileSetup();
-        return;
-      }
+    try {
+      chrome.storage.local.get(["freelancerProfile"], (stored) => {
+        if (chrome.runtime.lastError) return;
+        
+        profile = stored?.freelancerProfile || null;
+        if (!isSupportedUpworkRoute()) return;
 
-      profileFormVisible = false;
-      renderReadyState();
-    });
+        if (!profile) {
+          profileFormVisible = true;
+          renderProfileSetup();
+          return;
+        }
+
+        profileFormVisible = false;
+        renderReadyState();
+      });
+    } catch (error) {
+      console.warn("UpTally: Could not read local storage.", error);
+    }
     return;
   }
 
@@ -103,7 +118,22 @@ function analyzeCurrentJob() {
   const currentUrl = window.location.href;
   if (!profile) return;
 
-  const pageText = document.body.innerText || "";
+  // --- UPDATED LOGIC: Enforcement Block ---
+  if (!currentUrl.includes("~")) {
+    renderUIOverlay({
+      status: "waiting",
+      message: "Please click on a specific job from the feed to open its details before analyzing.",
+    });
+    return;
+  }
+
+  // --- UPDATED LOGIC: Pure innerText Token Minimizer ---
+  let pageText = document.body.innerText || "";
+  
+  if (pageText.length > 6000) {
+    pageText = pageText.slice(-6000);
+  }
+
   if (pageText.trim().length < 250) {
     renderUIOverlay({
       status: "waiting",
@@ -122,6 +152,10 @@ function analyzeCurrentJob() {
   });
 
   try {
+    if (typeof chrome === "undefined" || !chrome.runtime?.id) {
+      throw new Error("Extension context invalidated. Refresh the tab and try again.");
+    }
+
     chrome.runtime.sendMessage(
       { type: "ANALYZE_FULL_JOB", payload: pageText, profile },
       (response) => {
@@ -177,25 +211,41 @@ function renderProfileSetup() {
   injectScrollbarCSS();
   removeWidget();
 
+  const pName = profile?.name || "";
+  const pExp = profile?.experienceLevel || "";
+  const pSkills = (profile?.skills || []).join(", ");
+  const pPort = (profile?.portfolio || []).join(", ");
+  const pBio = profile?.bio || "";
+
   const widget = document.createElement("div");
   widget.id = "connects-optimizer-widget";
   widget.style.cssText =
     "position: fixed; bottom: 30px; right: 30px; z-index: 999999; padding: 20px; background: #ffffff; border-radius: 14px; box-shadow: 0 12px 35px rgba(0,0,0,0.15); width: 360px; max-height: 85vh; overflow-y: auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; border-left: 6px solid #3182ce;";
+  
   widget.innerHTML = `
-    <div style="font-weight: bold; font-size: 15px; color: #1a202c; margin-bottom: 6px;">Set up your freelancer profile</div>
-    <div style="font-size: 12px; color: #718096; line-height: 1.5; margin-bottom: 14px;">Saved once in this browser and used to personalize job scores and proposals.</div>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+      <div style="font-weight: bold; font-size: 15px; color: #1a202c;">Set up your freelancer profile</div>
+      <button id="connects-profile-close" type="button" aria-label="Close" style="border:0; background:transparent; cursor:pointer; color:#a0aec0; font-size:18px; line-height:1;">&times;</button>
+    </div>
+    <div style="font-size: 12px; color: #718096; line-height: 1.5; margin-bottom: 14px;">Freelancer data is used to personalize job scores and proposals.</div>
     <form id="connects-profile-form">
-      ${profileInput("profile-name", "Name", "e.g. Ayesha Khan", true)}
-      ${profileInput("profile-experience", "Experience level", "e.g. Intermediate, 4 years", true)}
-      ${profileInput("profile-skills", "Skills", "e.g. React, Python, UI/UX", true)}
-      ${profileInput("profile-portfolio", "Portfolio (optional)", "URL(s), separated by commas", false)}
+      ${profileInput("profile-name", "Name", "e.g. Ayesha Khan", true, pName)}
+      ${profileInput("profile-experience", "Experience level", "e.g. Intermediate, 4 years", true, pExp)}
+      ${profileInput("profile-skills", "Skills", "e.g. React, Python, UI/UX", true, pSkills)}
+      ${profileInput("profile-portfolio", "Portfolio (optional)", "URL(s), separated by commas", false, pPort)}
       <label style="display:block; font-size:12px; color:#4a5568; margin: 10px 0 4px;">Bio (optional)</label>
-      <textarea id="profile-bio" rows="3" placeholder="Short professional summary" style="box-sizing:border-box; width:100%; resize:vertical; border:1px solid #cbd5e0; border-radius:6px; padding:8px; font:inherit; font-size:12px;"></textarea>
+      <textarea id="profile-bio" rows="3" placeholder="Short professional summary" style="box-sizing:border-box; width:100%; resize:vertical; border:1px solid #cbd5e0; border-radius:6px; padding:8px; font:inherit; font-size:12px;">${escapeHtml(pBio)}</textarea>
       <div id="profile-error" style="display:none; color:#c53030; font-size:12px; margin:8px 0;"></div>
-      <button type="submit" style="width:100%; border:0; border-radius:7px; padding:10px; color:#fff; background:#3182ce; font-weight:700; cursor:pointer;">Save profile</button>
+      <button type="submit" style="width:100%; border:0; border-radius:7px; padding:10px; color:#fff; background:#3182ce; font-weight:700; cursor:pointer; margin-top:10px;">Save profile</button>
     </form>
   `;
   document.body.appendChild(widget);
+
+  document.getElementById("connects-profile-close")?.addEventListener("click", () => {
+    profileFormVisible = false;
+    removeWidget();
+    renderReadyState();
+  });
 
   document
     .getElementById("connects-profile-form")
@@ -231,6 +281,12 @@ function renderProfileSetup() {
         return;
       }
 
+      if (typeof chrome === "undefined" || !chrome.runtime?.id) {
+        error.textContent = "Extension context invalidated. Please refresh the page.";
+        error.style.display = "block";
+        return;
+      }
+
       chrome.runtime.sendMessage(
         { type: "SAVE_PROFILE", profile: nextProfile },
         (response) => {
@@ -251,8 +307,8 @@ function renderProfileSetup() {
     });
 }
 
-function profileInput(id, label, placeholder, required) {
-  return `<label style="display:block; font-size:12px; color:#4a5568; margin: 10px 0 4px;">${label}${required ? " *" : ""}</label><input id="${id}" ${required ? "required" : ""} placeholder="${placeholder}" style="box-sizing:border-box; width:100%; border:1px solid #cbd5e0; border-radius:6px; padding:8px; font:inherit; font-size:12px;" />`;
+function profileInput(id, label, placeholder, required, value = "") {
+  return `<label style="display:block; font-size:12px; color:#4a5568; margin: 10px 0 4px;">${label}${required ? " *" : ""}</label><input id="${id}" ${required ? "required" : ""} placeholder="${placeholder}" value="${escapeHtml(value)}" style="box-sizing:border-box; width:100%; border:1px solid #cbd5e0; border-radius:6px; padding:8px; font:inherit; font-size:12px;" />`;
 }
 
 function removeWidget() {
@@ -335,6 +391,31 @@ function renderUIOverlay(uiState) {
   }
 }
 
+function renderCircularScore(scoreValue, strokeColor) {
+  const numericScore = typeof scoreValue === "number" && !Number.isNaN(scoreValue)
+    ? Math.max(0, Math.min(100, Math.round(scoreValue)))
+    : 0;
+
+  const radius = 24;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (numericScore / 100) * circumference;
+
+  return `
+    <div style="position: relative; width: 62px; height: 62px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+      <svg width="62" height="62" viewBox="0 0 60 60" style="transform: rotate(-90deg);">
+        <circle cx="30" cy="30" r="${radius}" stroke="#edf2f7" stroke-width="5" fill="none" />
+        <circle cx="30" cy="30" r="${radius}" stroke="${strokeColor}" stroke-width="5" fill="none"
+                stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"
+                stroke-linecap="round" style="transition: stroke-dashoffset 0.6s ease;" />
+      </svg>
+      <div style="position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+        <span style="font-size: 16px; font-weight: 800; color: #1a202c; line-height: 1;">${numericScore}</span>
+        <span style="font-size: 8px; font-weight: 700; color: #718096; text-transform: uppercase; margin-top: 2px; letter-spacing: 0.5px;">MATCH</span>
+      </div>
+    </div>
+  `;
+}
+
 function displayFinalEvaluation(result) {
   const widget = document.getElementById("connects-optimizer-widget");
   if (!widget) return;
@@ -349,11 +430,16 @@ function displayFinalEvaluation(result) {
 
   const prosHtml = renderBulletList(evaluation.pros);
   const consHtml = renderBulletList(evaluation.cons);
+  
+  // --- NEW FEATURE: Proposal Copy Button UI ---
   const proposalHtml =
     decision !== "Skip" && proposal && typeof proposal.proposal === "string"
       ? `
         <div style="margin-bottom: 14px;">
-          <div style="font-size: 11px; font-weight: 800; color: #718096; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px;">Proposal Draft</div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <div style="font-size: 11px; font-weight: 800; color: #718096; text-transform: uppercase; letter-spacing: 0.5px;">Proposal Draft</div>
+            <button id="uptally-copy-proposal" type="button" style="background: transparent; border: 1px solid #cbd5e0; border-radius: 4px; padding: 2px 8px; font-size: 10px; font-weight: 700; color: #4a5568; cursor: pointer; transition: all 0.2s ease;">Copy</button>
+          </div>
           <div style="font-size: 13px; color: #2d3748; line-height: 1.6; white-space: pre-wrap; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">${escapeHtml(
             proposal.proposal,
           )}</div>
@@ -377,25 +463,28 @@ function displayFinalEvaluation(result) {
       `
       : "";
 
+  const circularScoreRing = renderCircularScore(evaluation.score, badgeColor);
+
   widget.innerHTML = `
     <div style="font-weight: bold; font-size: 15px; margin-bottom: 12px; color: #1a202c; display: flex; justify-content: space-between; align-items: center; gap: 12px;">
       <span>UpTally</span>
       <div style="display: flex; align-items: center; gap: 8px;">
-        <span style="font-size: 11px; padding: 3px 10px; border-radius: 20px; color: #fff; background: ${badgeColor}; font-weight: 800; letter-spacing: 0.5px;">${escapeHtml(
-          decision,
-        )}</span>
+        <span style="font-size: 11px; padding: 3px 10px; border-radius: 20px; color: #fff; background: ${badgeColor}; font-weight: 800; letter-spacing: 0.5px;">${escapeHtml(decision)}</span>
         <span style="cursor: pointer; color: #a0aec0; font-size: 16px;" onclick="document.getElementById('connects-optimizer-widget')?.remove()">&times;</span>
       </div>
     </div>
 
-    <div style="margin-bottom: 14px;">
-      <div style="font-size: 11px; font-weight: 800; color: #718096; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px;">Evaluation</div>
-      <div style="font-size: 13px; color: #2d3748; line-height: 1.5;">
-        <strong style="color: #1a202c;">Score ${escapeHtml(formatScore(evaluation.score))}</strong>
-        <span style="color: #718096;"> | Confidence ${escapeHtml(
-          formatConfidence(evaluation.confidence),
-        )}</span>
-        <div style="margin-top: 6px;">${escapeHtml(evaluation.reasoning || "")}</div>
+    <div style="margin-bottom: 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px;">
+      <div style="display: flex; align-items: center; gap: 14px;">
+        ${circularScoreRing}
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <div style="font-size: 13px; font-weight: 700; color: #1a202c;">
+            Score: <span style="color: ${badgeColor};">${escapeHtml(formatScore(evaluation.score))}</span>
+          </div>
+          <div style="font-size: 12px; color: #4a5568;">
+            Confidence: <span style="background: #edf2f7; border: 1px solid #e2e8f0; padding: 2px 7px; border-radius: 12px; font-weight: 700; color: #2d3748; font-size: 11px;">${escapeHtml(formatConfidence(evaluation.confidence))}</span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -409,10 +498,61 @@ function displayFinalEvaluation(result) {
       ${consHtml}
     </div>
 
-    ${warningHtml}
-    ${proposalHtml}
-    ${extractionHtml}
+    <div id="uptally-details-toggle" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #edf2f7; border-radius: 8px; cursor: pointer; margin-bottom: 10px; transition: background 0.2s;">
+      <span style="font-size: 11px; font-weight: 800; color: #4a5568; text-transform: uppercase; letter-spacing: 0.5px;">More Details</span>
+      <span id="uptally-details-chevron" style="font-size: 10px; color: #4a5568; transition: transform 0.3s;">▼</span>
+    </div>
+
+    <div id="uptally-hidden-details" style="display: none; padding-top: 4px;">
+      <div style="margin-bottom: 14px;">
+        <div style="font-size: 11px; font-weight: 800; color: #718096; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px;">Evaluation Summary</div>
+        <div style="font-size: 12.5px; color: #2d3748; line-height: 1.5; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
+          ${escapeHtml(evaluation.reasoning || "")}
+        </div>
+      </div>
+      ${warningHtml}
+      ${proposalHtml}
+      ${extractionHtml}
+    </div>
   `;
+
+  // Attach event listener for the dropdown toggle
+  const toggleBtn = document.getElementById("uptally-details-toggle");
+  if (toggleBtn) {
+    toggleBtn.addEventListener("click", () => {
+      const content = document.getElementById("uptally-hidden-details");
+      const chevron = document.getElementById("uptally-details-chevron");
+      if (content.style.display === "none") {
+        content.style.display = "block";
+        chevron.style.transform = "rotate(180deg)";
+        toggleBtn.style.background = "#e2e8f0";
+      } else {
+        content.style.display = "none";
+        chevron.style.transform = "rotate(0deg)";
+        toggleBtn.style.background = "#edf2f7";
+      }
+    });
+  }
+
+  // --- NEW FEATURE: Copy Proposal Button Listener ---
+  const copyBtn = document.getElementById("uptally-copy-proposal");
+  if (copyBtn && proposal && typeof proposal.proposal === "string") {
+    copyBtn.addEventListener("click", () => {
+      navigator.clipboard.writeText(proposal.proposal).then(() => {
+        // Visual feedback
+        copyBtn.textContent = "Copied!";
+        copyBtn.style.color = "#14a800";
+        copyBtn.style.borderColor = "#14a800";
+        setTimeout(() => {
+          copyBtn.textContent = "Copy";
+          copyBtn.style.color = "#4a5568";
+          copyBtn.style.borderColor = "#cbd5e0";
+        }, 2000);
+      }).catch((err) => {
+        console.error("UpTally: Failed to copy proposal", err);
+      });
+    });
+  }
 }
 
 function renderExtractionSection(extraction) {
