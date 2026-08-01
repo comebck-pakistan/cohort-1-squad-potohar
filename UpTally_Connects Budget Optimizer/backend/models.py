@@ -16,7 +16,7 @@ EXTRACTION_SCHEMA = {
   "experienceLevel": "string | null",
   "skills": ["string"],
   "paymentVerified": "boolean | null",
-  "proposalRange": "string | null",
+  "proposalRange": "number | null",  # <-- UPDATED: Now strictly accepts the averaged number
   "postedAt": "string | null",
   "proposalCount": "number | null",
   "client": {
