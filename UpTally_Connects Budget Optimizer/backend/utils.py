@@ -2,6 +2,14 @@ import re
 import json
 from typing import Any
 
+EVALUATION_WEIGHTS = {
+    "freelancerAlignment": 0.35,
+    "opportunityVisibility": 0.25,
+    "clientQuality": 0.25,
+    "budgetRealism": 0.10,
+    "scopeClarity": 0.05,
+}
+
 def normalize_job_text(text: str) -> str:
     normalized = str(text or "")
     normalized = normalized.replace("\u00a0", " ")
@@ -86,3 +94,59 @@ def normalize_decision(decision: Any) -> str:
     if "skip" in value:
         return "Skip"
     return "Apply with Caution"
+
+
+def validate_evaluation(evaluation: Any) -> dict:
+    """Validate the LLM's scoring arithmetic without making the decision for it."""
+    if not isinstance(evaluation, dict):
+        raise ValueError("Evaluation must be a JSON object.")
+
+    score = evaluation.get("score")
+    if isinstance(score, bool) or not isinstance(score, int) or not 0 <= score <= 100:
+        raise ValueError("Evaluation score must be an integer from 0 to 100.")
+
+    confidence = evaluation.get("confidence")
+    if (
+        isinstance(confidence, bool)
+        or not isinstance(confidence, (int, float))
+        or not 0 <= confidence <= 1
+    ):
+        raise ValueError("Evaluation confidence must be a number from 0 to 1.")
+
+    factor_scores = evaluation.get("factorScores")
+    if not isinstance(factor_scores, dict):
+        raise ValueError("Evaluation factorScores must be an object.")
+
+    weighted_score = 0.0
+    for factor, weight in EVALUATION_WEIGHTS.items():
+        value = factor_scores.get(factor)
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not 0 <= value <= 100:
+            raise ValueError(f"Evaluation factor {factor} must be a number from 0 to 100.")
+        weighted_score += value * weight
+
+    normalized_decision = normalize_decision(evaluation.get("decision"))
+    hard_skip_evidence = evaluation.get("hardSkipEvidence")
+
+    if hard_skip_evidence:
+        if normalized_decision != "Skip" or score != 0:
+            raise ValueError("A hard Skip must return decision Skip and score 0.")
+        evaluation["decision"] = normalized_decision
+        return evaluation
+
+    # Allow one point for ordinary rounding differences, but not invented totals.
+    if abs(float(score) - round(weighted_score)) > 1:
+        raise ValueError(
+            f"Evaluation score {score} does not match weighted factor score {round(weighted_score)}."
+        )
+
+    expected_decision = (
+        "Apply" if score >= 70 else "Apply with Caution" if score >= 40 else "Skip"
+    )
+    if normalized_decision != expected_decision:
+        raise ValueError(
+            f"Evaluation decision {normalized_decision} does not match score band {expected_decision}."
+        )
+
+    # Store the canonical label, but never change its score-derived band.
+    evaluation["decision"] = normalized_decision
+    return evaluation

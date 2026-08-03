@@ -1,7 +1,9 @@
+import json
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from models import AnalyzePayload
-from utils import normalize_job_text, normalize_decision
+from utils import normalize_job_text, normalize_decision, validate_evaluation
 from prompts import (
     build_extraction_prompt,
     build_evaluation_prompt,
@@ -36,7 +38,7 @@ async def run_job_analysis_pipeline(payload: AnalyzePayload):
             system_instruction="You are stage 1 of a three-stage Upwork analysis pipeline. Extract only explicit facts and output strict JSON.",
             prompt=extraction_prompt,
             temperature=0.1,
-            max_tokens=1200
+            max_tokens=1500
         )
 
         # Stage 2: Evaluation
@@ -45,9 +47,33 @@ async def run_job_analysis_pipeline(payload: AnalyzePayload):
             stage_name="stage 2 evaluation",
             system_instruction="You are stage 2 of a three-stage Upwork analysis pipeline. Evaluate the extracted job JSON and output strict JSON.",
             prompt=evaluation_prompt,
-            temperature=0.5,
-            max_tokens=900
+            temperature=0.2,
+            max_tokens=1500
         )
+
+        # The LLM still owns the evaluation. Validation only catches arithmetic
+        # or band inconsistencies and gives the model one chance to correct them.
+        try:
+            evaluation = validate_evaluation(evaluation)
+        except ValueError as validation_error:
+            correction_prompt = f"""{evaluation_prompt}
+
+Your previous response failed structural validation:
+{validation_error}
+
+Previous response:
+{json.dumps(evaluation, indent=2)}
+
+Return the complete corrected evaluation JSON only. Recalculate every factor,
+the weighted score, and the matching decision band. Do not change job facts."""
+            evaluation = await call_gemini_stage(
+                stage_name="stage 2 evaluation correction",
+                system_instruction="You are correcting an internally inconsistent Upwork evaluation. Output strict JSON only.",
+                prompt=correction_prompt,
+                temperature=0.1,
+                max_tokens=1500
+            )
+            evaluation = validate_evaluation(evaluation)
 
         # Stage 3: Proposal (Conditional)
         proposal = None
